@@ -1,0 +1,313 @@
+/* ---------- WBS list ---------- */
+.wbs {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.wbs__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.wbs__toolbar-left {
+  display: flex;
+  gap: 8px;
+}
+
+.wbs__filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-3);
+}
+
+.wbs__filter select {
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-strong);
+  background: #fff;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.wbs__scroll {
+  overflow-x: auto;
+}
+
+.wbs__table {
+  min-width: 940px;
+}
+
+.wbs__row {
+  display: grid;
+  grid-template-columns: minmax(210px, 1fr) 100px 46px 46px 56px 56px 56px 58px 74px 98px 88px;
+  column-gap: 6px;
+  align-items: center;
+  min-height: 52px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--border-soft);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.1s;
+  outline-offset: -2px;
+}
+
+.wbs__row:hover {
+  background: #f7f8fc;
+}
+
+.wbs__row.is-selected {
+  background: var(--accent-soft);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.wbs__row--head {
+  min-height: 40px;
+  cursor: default;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-3);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.wbs__row--head:hover {
+  background: var(--surface-2);
+}
+
+.wbs__row--parent {
+  min-height: 54px;
+  background: #f7f8fb;
+  font-weight: 700;
+}
+
+.wbs__row--parent:hover {
+  background: #f1f2f8;
+}
+
+.wbs__row--parent.is-selected {
+  background: var(--accent-soft);
+}
+
+.wbs__row--total {
+  min-height: 52px;
+  cursor: default;
+  background: var(--surface-2);
+  border-top: 1px solid var(--border);
+  border-bottom: 0;
+  font-weight: 700;
+}
+
+.wbs__row--total:hover {
+  background: var(--surface-2);
+}
+
+.wbs__row.is-done:not(.wbs__row--parent) .wbs__title {
+  color: var(--text-3);
+}
+
+.wbs__name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.wbs__code {
+  flex: none;
+  min-width: 24px;
+  color: var(--text-3);
+  font-weight: 600;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.wbs__title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wbs__row:not(.wbs__row--parent):not(.wbs__row--head):not(.wbs__row--total) .wbs__title {
+  font-weight: 500;
+}
+
+.wbs__owner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+.wbs__date {
+  color: var(--text-2);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.wbs__date.is-late {
+  color: var(--warn);
+  font-weight: 700;
+}
+
+.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.num i {
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-3);
+  margin-left: 1px;
+}
+
+.num--strong {
+  color: var(--accent-strong);
+  font-weight: 700;
+}
+
+.wbs__row--head .num {
+  font-weight: 700;
+}
+
+.wbs__progress {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  padding-right: 6px;
+}
+
+.wbs__empty {
+  padding: 40px;
+  text-align: center;
+  color: var(--text-3);
+}
+
+.chev {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  color: var(--text-3);
+}
+
+button.chev:hover {
+  background: #e6e8f0;
+  color: var(--text);
+}
+
+.chev--spacer {
+  pointer-events: none;
+}
+
+.row-add {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin-left: 2px;
+  border-radius: 6px;
+  color: var(--text-3);
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.wbs__row:hover .row-add,
+.row-add:focus-visible {
+  opacity: 1;
+}
+
+.row-add:hover {
+  background: var(--accent-soft-2);
+  color: var(--accent-strong);
+}
+
+.var {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.var--over {
+  color: var(--watch);
+}
+
+.var--under {
+  color: var(--good);
+}
+
+.var--zero {
+  color: var(--text-3);
+  font-weight: 500;
+}
+
+.add-task {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  width: 100%;
+  height: 48px;
+  padding: 0 20px;
+  border-top: 1px solid var(--border);
+  color: var(--text-2);
+  font-weight: 600;
+}
+
+.add-task:hover {
+  background: var(--surface-3);
+  color: var(--accent-strong);
+}
+
+.wbs {
+  container-type: inline-size;
+  container-name: wbs;
+}
+
+.wbs__progress,
+.wbs__row--head > :nth-child(10) {
+  padding-left: 8px;
+}
+
+/* 幅が狭いとき（ドロワー表示中など）は 担当・開始・終了 を畳んで、工数列を優先して見せる */
+@container wbs (max-width: 880px) {
+  .wbs__table {
+    min-width: 600px;
+  }
+
+  .wbs__row {
+    grid-template-columns: minmax(120px, 1fr) 46px 46px 46px 50px 68px 86px 78px;
+    padding: 0 10px;
+  }
+
+  .wbs__row > :nth-child(2),
+  .wbs__row > :nth-child(3),
+  .wbs__row > :nth-child(4) {
+    display: none;
+  }
+}

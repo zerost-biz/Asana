@@ -1,0 +1,344 @@
+/* ---------- Drawer (right side) ---------- */
+.drawer {
+  position: fixed;
+  top: var(--topbar-h);
+  right: 0;
+  bottom: 0;
+  width: var(--drawer-w);
+  max-width: 100vw;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  box-shadow: var(--shadow-drawer);
+  animation: slide-in 0.18s ease-out;
+}
+
+.drawer__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px 14px 24px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.drawer__titles {
+  min-width: 0;
+}
+
+.drawer__eyebrow {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-3);
+  margin-bottom: 2px;
+}
+
+.drawer__title {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.drawer__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.drawer__foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 24px;
+  border-top: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.drawer__spacer {
+  flex: 1;
+}
+
+.saved-note {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--good);
+  margin-right: 4px;
+}
+
+/* ---------- 工数サマリー ---------- */
+.metrics {
+  padding: 16px;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+
+.metrics__grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  min-width: 0;
+}
+
+.metric__label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-3);
+}
+
+.metric__value {
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.metric__prev {
+  font-size: 11px;
+  color: var(--text-3);
+  text-decoration: line-through;
+  font-variant-numeric: tabular-nums;
+}
+
+.metric--strong {
+  background: var(--accent-soft);
+}
+
+.metric--strong .metric__value {
+  color: var(--accent-strong);
+}
+
+.metric--over {
+  background: var(--watch-bg);
+}
+
+.metric--over .metric__value {
+  color: var(--watch);
+}
+
+.metric--under .metric__value {
+  color: var(--good);
+}
+
+.metrics__bars {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.metrics__barlabel {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.metrics__barlabel b {
+  color: var(--text);
+}
+
+/* ---------- Form ---------- */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.field__label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-2);
+}
+
+.field__help {
+  font-size: 11px;
+  color: var(--text-3);
+  line-height: 1.5;
+}
+
+.input {
+  width: 100%;
+  height: 38px;
+  padding: 0 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: #fff;
+  outline: none;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+
+.input:hover {
+  border-color: #c5cad8;
+}
+
+.input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft-2);
+}
+
+.input:disabled {
+  background: var(--surface-3);
+  color: var(--text-3);
+}
+
+.input--num {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.input--area {
+  height: auto;
+  padding: 10px 12px;
+  resize: vertical;
+  line-height: 1.6;
+}
+
+select.input {
+  appearance: none;
+  padding-right: 32px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238b93a5' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+.owner-select {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.slider {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.slider input[type='range'] {
+  flex: 1;
+  accent-color: var(--accent);
+  height: 24px;
+}
+
+.slider__num {
+  width: 72px;
+  flex: none;
+}
+
+.seg {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  padding: 4px;
+  border-radius: 10px;
+  background: var(--surface-3);
+}
+
+.seg__btn {
+  height: 32px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.seg__btn:hover {
+  color: var(--text);
+}
+
+.seg__btn.is-on {
+  background: #fff;
+  color: var(--accent-strong);
+  box-shadow: var(--shadow-sm), 0 0 0 1px var(--border);
+}
+
+.seg__btn--blocked.is-on {
+  color: var(--warn);
+}
+
+.form__errors {
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--warn-bg);
+  color: var(--warn);
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* ---------- history ---------- */
+.history__list {
+  display: flex;
+  flex-direction: column;
+}
+
+.history__list li {
+  display: grid;
+  grid-template-columns: 44px 22px 52px 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-soft);
+  font-size: 13px;
+}
+
+.history__date {
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.history__hours {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.history__comment {
+  color: var(--text-2);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.history__list .history__more {
+  display: block;
+  color: var(--text-3);
+  font-size: 12px;
+  border: 0;
+}
+
+@media (max-width: 1366px) {
+  :root {
+    --drawer-w: 380px;
+  }
+}

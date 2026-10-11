@@ -1,0 +1,11 @@
+/* Project Delivery OS - global styles
+ * tokens → shell → ui → 各画面 の順に読み込む */
+@import './tokens.css';
+@import './shell.css';
+@import './ui.css';
+@import './drawer.css';
+@import './wbs.css';
+@import './workload.css';
+@import './timeline.css';
+@import './dashboard.css';
+@import './mywork.css';

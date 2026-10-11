@@ -1,0 +1,125 @@
+:root {
+  --bg: #f5f6f9;
+  --surface: #ffffff;
+  --surface-2: #fafbfd;
+  --surface-3: #f3f4f8;
+  --border: #e8eaf0;
+  --border-soft: #f0f1f6;
+  --border-strong: #d8dce6;
+
+  --text: #1c2130;
+  --text-2: #565e72;
+  --text-3: #8b93a5;
+
+  /* ブランド: 落ち着いたインディゴ */
+  --accent: #5b5bd6;
+  --accent-strong: #4848c0;
+  --accent-soft: #f0f0fc;
+  --accent-soft-2: #e2e2f8;
+  --accent-bar: #8c86e3;
+
+  /* 状態色。赤は「重大リスク(RISK)」と「100%超の負荷」だけに使う */
+  --good: #22895a;
+  --good-bg: #e4f4ec;
+  --watch: #a06a06;
+  --watch-bg: #fcf1d4;
+  --warn: #c8620e; /* Blocked / 遅延（橙） */
+  --warn-bg: #fff0e0;
+  --risk: #d13a3a;
+  --risk-bg: #fdeaea;
+
+  --radius-sm: 8px;
+  --radius: 10px;
+  --radius-lg: 12px;
+  --shadow-sm: 0 1px 2px rgba(24, 30, 48, 0.05);
+  --shadow: 0 1px 2px rgba(24, 30, 48, 0.04), 0 4px 16px rgba(24, 30, 48, 0.05);
+  --shadow-drawer: -10px 0 32px rgba(24, 30, 48, 0.1), -1px 0 0 var(--border);
+  --shadow-pop: 0 8px 28px rgba(24, 30, 48, 0.14), 0 0 0 1px var(--border);
+
+  --topbar-h: 56px;
+  --sidebar-w: 232px;
+  --drawer-w: 420px;
+
+  --font: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'Yu Gothic UI', 'Meiryo UI', Meiryo,
+    system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+::selection {
+  background: var(--accent-soft-2);
+}
+
+/* スクロールバーを控えめに */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #cfd3de transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
