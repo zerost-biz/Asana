@@ -30,12 +30,30 @@ export function loadData(): AppData | null {
   }
 }
 
+let warned = false
+
 export function saveData(data: AppData): void {
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
   } catch (e) {
-    // 容量超過・プライベートモード等。プロトタイプなので握りつぶして警告のみ
-    console.warn('[Project Delivery OS] localStorage への保存に失敗しました', e)
+    // 容量超過・サンドボックス化された iframe・プライベートモード等。
+    // プロトタイプなので握りつぶし、メモリ上の状態だけで動作を続ける（警告は1回だけ）
+    if (!warned) {
+      warned = true
+      console.warn('[Project Delivery OS] localStorage に保存できません。変更はこのページを閉じるまでの一時的なものになります', e)
+    }
+  }
+}
+
+/** localStorage が実際に読み書きできるか */
+export function isStorageAvailable(): boolean {
+  try {
+    const k = `${STORAGE_KEY}:probe`
+    window.localStorage.setItem(k, '1')
+    window.localStorage.removeItem(k)
+    return true
+  } catch {
+    return false
   }
 }
 

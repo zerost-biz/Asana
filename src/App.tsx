@@ -1,4 +1,4 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, MemoryRouter, Route, Routes } from 'react-router-dom'
 import { AppShell } from './components/AppShell'
 import { DashboardPage } from './pages/DashboardPage'
 import { MyWorkPage } from './pages/MyWorkPage'
@@ -14,9 +14,12 @@ import { ProjectsPage } from './pages/ProjectsPage'
 import { WorkloadPage } from './pages/WorkloadPage'
 import { AppProvider } from './store/AppContext'
 
+// 単一HTMLビルド（--mode single）では URL に依存しないメモリルーターを使う
+const Router = import.meta.env.VITE_ROUTER === 'memory' ? MemoryRouter : BrowserRouter
+
 export default function App() {
   return (
-    <BrowserRouter>
+    <Router>
       <AppProvider>
         <Routes>
           <Route element={<AppShell />}>
@@ -34,6 +37,6 @@ export default function App() {
           </Route>
         </Routes>
       </AppProvider>
-    </BrowserRouter>
+    </Router>
   )
 }

@@ -49,10 +49,14 @@ npm run dev        # http://localhost:5173 で起動（初期表示は Dashboard
 ```bash
 npm run build      # 型チェック(tsc) + 本番ビルド
 npm run preview    # ビルド結果の確認
+npm run build:single  # JS/CSS 込みの単一HTML（dist-single/index.html）を出力。ダブルクリックで開ける
 npm run typecheck  # TypeScript チェックのみ
 npm run lint       # ESLint
 npm test           # ロジックのユニットテスト
 ```
+
+> **単一HTML版について**: `npm run build:single` の成果物は URL に依存しないメモリルーターで動き、そのまま開けます。
+> チャットや iframe のプレビュー等で `localStorage` が使えない環境では、画面上部に「保存されない」旨のバナーが出て、入力はページを閉じるまでの一時的なものになります。
 
 ## 主要画面
 
