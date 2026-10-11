@@ -17,6 +17,7 @@ import {
   type WbsStatus,
   type WbsType,
 } from '../domain/types'
+import { defaultOrderId, selectableOrders } from '../domain/orders'
 import { useApp } from '../store/AppContext'
 import { Avatar } from './Avatar'
 import { ConfirmDialog } from './ConfirmDialog'
@@ -76,6 +77,8 @@ interface Draft {
   progress: number
   predecessorId: string
   deliverableUrl: string
+  /** 社内オーダー（作業時間を計上する先）。空なら未設定 */
+  orderId: string
   comment: string
   parentId: string
 }
@@ -136,6 +139,7 @@ function TaskForm({
         progress: item.progress,
         predecessorId: item.predecessorId ?? '',
         deliverableUrl: item.deliverableUrl ?? '',
+        orderId: item.orderId ?? '',
         comment: item.comment ?? '',
         parentId: item.parentId ?? '',
       }
@@ -158,6 +162,7 @@ function TaskForm({
       progress: 0,
       predecessorId: '',
       deliverableUrl: '',
+      orderId: isMs ? '' : (defaultOrderId(data.internalOrders, projectId) ?? ''),
       comment: '',
       parentId: parentParam ?? '',
     }
@@ -297,6 +302,7 @@ function TaskForm({
         status: draft.status,
         predecessorId: draft.predecessorId || undefined,
         deliverableUrl: draft.deliverableUrl.trim() || undefined,
+        orderId: isMilestone ? undefined : draft.orderId || undefined,
         ...common,
       })
       toast(
@@ -336,6 +342,7 @@ function TaskForm({
         status: draft.status,
         predecessorId: draft.predecessorId || undefined,
         deliverableUrl: draft.deliverableUrl.trim() || undefined,
+        orderId: draft.type === 'milestone' ? undefined : draft.orderId || undefined,
       })
       toast(
         isMilestone ? (
@@ -594,6 +601,26 @@ function TaskForm({
                 placeholder="目的・完了の条件など"
               />
             </Field>
+
+            {!isParent && !isMilestone && (
+              <Field label="社内オーダー" help="作業時間・人件費を計上するオーダー。レポート（締めのCSV）の集計に使います">
+                <select
+                  className="input"
+                  value={draft.orderId}
+                  disabled={structOff}
+                  onChange={(e) => set('orderId', e.target.value)}
+                  aria-label="社内オーダー"
+                >
+                  <option value="">未設定</option>
+                  {selectableOrders(data.internalOrders, projectId, draft.orderId).map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.code} {o.name}
+                      {o.status === 'closed' ? '（終了）' : ''}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            )}
 
             {!isParent && !isMilestone && (
               <div className="form__row">
@@ -872,7 +899,10 @@ function TaskForm({
                     <span className="history__date">{fmtMD(e.date)}</span>
                     <Avatar user={derived.userById.get(e.userId)} size="sm" />
                     <span className="history__hours">{fmtNum(e.hours)}h</span>
-                    <span className="history__comment">{e.comment || '—'}</span>
+                    <span className="history__comment">
+                      {e.orderId && <em className="history__order">{data.internalOrders.find((o) => o.id === e.orderId)?.code} </em>}
+                      {e.comment || '—'}
+                    </span>
                   </li>
                 ))}
                 {entries.length > 8 && <li className="history__more">ほか {entries.length - 8} 件</li>}

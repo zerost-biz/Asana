@@ -21,7 +21,9 @@ export const ok = (name, cond, extra = '') => {
 }
 
 export async function launch(opts = {}) {
-  const browser = await chromium.launch(exe ? { executablePath: exe } : {})
+  // 日本語のファイル名でダウンロードできるよう、ブラウザを UTF-8 のロケールで起動する（ロケール未設定の環境対策）
+  const env = { ...process.env, LANG: process.env.LANG || 'C.UTF-8', LC_ALL: process.env.LC_ALL || 'C.UTF-8' }
+  const browser = await chromium.launch({ env, ...(exe ? { executablePath: exe } : {}) })
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, ...opts })
   const page = await ctx.newPage()
   const errs = []

@@ -12,6 +12,7 @@ import {
   ProjectCloseRoute,
   ProjectDashboardView,
   ProjectListView,
+  ProjectOrdersView,
   ProjectOverviewView,
   ProjectPage,
   ProjectRisksView,
@@ -20,6 +21,7 @@ import {
 } from './pages/ProjectPage'
 import { PeoplePage } from './pages/PeoplePage'
 import { ProjectsPage } from './pages/ProjectsPage'
+import { ReportsPage } from './pages/ReportsPage'
 import { ReviewPage } from './pages/ReviewPage'
 import { SkillMatrixPage } from './pages/SkillMatrixPage'
 import { TalentProfilePage } from './pages/TalentProfilePage'
@@ -47,6 +49,7 @@ export default function App() {
               <Route path="dashboard" element={<ProjectDashboardView />} />
               <Route path="workload" element={<ProjectWorkloadView />} />
               <Route path="risks" element={<ProjectRisksView />} />
+              <Route path="orders" element={<ProjectOrdersView />} />
               <Route path="close" element={<ProjectCloseRoute />} />
             </Route>
             <Route path="my-work" element={<MyWorkPage />} />
@@ -56,6 +59,7 @@ export default function App() {
             <Route path="people/skills" element={<SkillMatrixPage />} />
             <Route path="people/:userId" element={<TalentProfilePage />} />
             <Route path="review" element={<ReviewPage />} />
+            <Route path="reports" element={<ReportsPage />} />
             <Route path="admin" element={<AdminPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>

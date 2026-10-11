@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { leafMetrics, resolveLogWork } from '../domain/calculations'
 import { daysBetween, fmtMD } from '../domain/dates'
 import { clamp, fmtNum, fmtSignedH, roundStep } from '../domain/format'
+import { defaultOrderId, selectableOrders } from '../domain/orders'
 import { PRIORITY_LABEL, type WbsItem } from '../domain/types'
 import { useApp } from '../store/AppContext'
 import { ProgressBar } from './ProgressBar'
@@ -37,6 +38,9 @@ export function WorkCard({ item, result, onSaved }: Props) {
   const [etc, setEtc] = useState(String(item.etcHours))
   const [progress, setProgress] = useState(item.progress)
   const [comment, setComment] = useState('')
+  // 時間を計上する社内オーダー: 作業に設定されたオーダー → なければ、使用中のオーダーが1つだけならそれ
+  const orderChoices = selectableOrders(data.internalOrders, item.projectId, item.orderId)
+  const [orderId, setOrderId] = useState(item.orderId ?? defaultOrderId(data.internalOrders, item.projectId) ?? '')
 
   const etcNum = etc.trim() === '' ? NaN : Number(etc)
   const etcValid = Number.isFinite(etcNum) && etcNum >= 0
@@ -59,6 +63,7 @@ export function WorkCard({ item, result, onSaved }: Props) {
       comment,
       etcHours: etcNum,
       progress,
+      orderId: orderId || undefined,
     })
     onSaved(item.id, { hours, before })
     toast(
@@ -215,6 +220,21 @@ export function WorkCard({ item, result, onSaved }: Props) {
           </div>
           <ProgressBar value={progress} size="sm" tone="good" />
         </div>
+
+        {orderChoices.length > 0 && (
+          <div className="wc__field wc__field--wide">
+            <span className="wc__label">社内オーダー（時間の計上先）</span>
+            <select className="input" value={orderId} onChange={(e) => setOrderId(e.target.value)} aria-label="社内オーダー">
+              <option value="">未設定</option>
+              {orderChoices.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.code} {o.name}
+                  {o.status === 'closed' ? '（終了）' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div className="wc__field wc__field--wide">
           <span className="wc__label">コメント</span>

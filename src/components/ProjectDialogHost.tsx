@@ -5,6 +5,7 @@ import { addDays, isWorkday, toISO } from '../domain/dates'
 import { can, denyReason } from '../domain/permissions'
 import { fmtNum, fmtYen } from '../domain/format'
 import { PRIORITY_LABEL, PROJECT_STATUS_LABEL, type Priority, type Project, type ProjectStatus } from '../domain/types'
+import { isOrderCodeTaken, normalizeOrderCode } from '../domain/orders'
 import { useApp } from '../store/AppContext'
 import { Avatar } from './Avatar'
 import { cx } from './cx'
@@ -69,6 +70,7 @@ function ProjectDialog({ state, onClose }: { state: Exclude<DialogState, null>; 
   const [end, setEnd] = useState(editing?.endDate ?? toISO(addDays(firstDay, 7 * 8 - 3)))
   const [budget, setBudget] = useState(editing?.budget ? String(editing.budget) : '')
   const [template, setTemplate] = useState<'standard' | 'blank'>('standard')
+  const [orderCode, setOrderCode] = useState('')
   /** '__all__' = 全メンバーで分担 / '' = 未設定 / ユーザーid = その人 */
   const [owner, setOwner] = useState<string>('__all__')
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -83,6 +85,7 @@ function ProjectDialog({ state, onClose }: { state: Exclude<DialogState, null>; 
   if (!start || !end) errors.push('開始日・終了日を入力してください')
   else if (end < start) errors.push('終了日は開始日以降にしてください')
   if (budgetNum !== undefined && (!Number.isFinite(budgetNum) || budgetNum < 0)) errors.push('受注額は 0 以上の数値で入力してください')
+  if (!isEdit && orderCode.trim() && isOrderCodeTaken(data.internalOrders, orderCode)) errors.push('この社内オーダー番号は既に使われています')
 
   const resolveCustomer = (): string => {
     if (customerId !== NEW_CUSTOMER) return customerId
@@ -121,6 +124,7 @@ function ProjectDialog({ state, onClose }: { state: Exclude<DialogState, null>; 
       endDate: end,
       budget: budgetNum && budgetNum > 0 ? budgetNum : undefined,
       template,
+      orderCode: orderCode.trim() ? normalizeOrderCode(orderCode) : undefined,
       ownerIds: template !== 'standard' ? [] : owner === '__all__' ? activeUsers.map((u) => u.id) : owner ? [owner] : [],
     })
     toast(
@@ -276,6 +280,14 @@ function ProjectDialog({ state, onClose }: { state: Exclude<DialogState, null>; 
           <span className="field__help">
             {budgetNum && Number.isFinite(budgetNum) ? `${fmtYen(budgetNum)}。粗利の計算に使います` : '受注額を設定すると「受注額 − 人件費」で粗利を計算します'}
           </span>
+
+          {!isEdit && (
+            <label className="field" htmlFor="pj-order">
+              <span className="field__label">社内オーダー番号（任意）</span>
+              <input id="pj-order" className="input" value={orderCode} onChange={(e) => setOrderCode(e.target.value)} placeholder="例: IO-2601-003" />
+              <span className="field__help">入力すると、このプロジェクトの社内オーダーとして登録し、作業の計上先に設定します。あとから「社内オーダー」タブで追加・変更もできます</span>
+            </label>
+          )}
 
           <label className="field" htmlFor="pj-desc">
             <span className="field__label">概要</span>

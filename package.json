@@ -12,7 +12,7 @@
     "typecheck": "tsc -b",
     "lint": "eslint .",
     "test": "vitest run",
-    "e2e": "node e2e/p0.mjs && node e2e/p1.mjs"
+    "e2e": "node e2e/p0.mjs && node e2e/p1.mjs && node e2e/p2.mjs"
   },
   "dependencies": {
     "date-fns": "^4.4.0",

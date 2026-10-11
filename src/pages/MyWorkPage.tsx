@@ -154,7 +154,10 @@ export function MyWorkPage() {
                 <span className="log__task">
                   {derived.projectById.get(derived.idx.byId.get(e.wbsId)?.projectId ?? '')?.name} / {derived.idx.byId.get(e.wbsId)?.title ?? '（削除済み）'}
                 </span>
-                <span className="log__comment">{e.comment}</span>
+                <span className="log__comment">
+                  {e.orderId && <em className="history__order">{data.internalOrders.find((o) => o.id === e.orderId)?.code} </em>}
+                  {e.comment}
+                </span>
                 <button type="button" className="icon-btn icon-btn--sm" onClick={() => actions.deleteEntry(e.id)} aria-label="この入力を取り消す">
                   <X size={14} />
                 </button>

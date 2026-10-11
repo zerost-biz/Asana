@@ -10,6 +10,7 @@ import type {
   CloseMember,
   Customer,
   EntityType,
+  InternalOrder,
   Experience,
   GrowthFocus,
   ISODate,
@@ -35,6 +36,8 @@ export interface LogWorkPayload {
   comment: string
   etcHours: number
   progress: number
+  /** 作業時間を計上する社内オーダー（省略すると、作業に設定されたオーダー） */
+  orderId?: string
 }
 
 export interface Meta {
@@ -44,7 +47,7 @@ export interface Meta {
 }
 
 export type Body =
-  | { type: 'PROJECT_ADD'; project: Project; items: WbsItem[] }
+  | { type: 'PROJECT_ADD'; project: Project; items: WbsItem[]; orders?: InternalOrder[] }
   | { type: 'PROJECT_UPDATE'; id: string; patch: Partial<Omit<Project, 'id'>> }
   | { type: 'PROJECT_DELETE'; id: string }
   | { type: 'WBS_ADD'; item: WbsItem }
@@ -55,6 +58,10 @@ export type Body =
   | { type: 'WBS_MOVE'; id: string; dir: 'up' | 'down' }
   | { type: 'LOG_WORK'; payload: LogWorkPayload }
   | { type: 'ENTRY_DELETE'; id: string }
+  | { type: 'ORDER_ADD'; order: InternalOrder }
+  | { type: 'ORDER_UPDATE'; id: string; patch: Partial<Omit<InternalOrder, 'id' | 'projectId'>> }
+  | { type: 'ORDER_DELETE'; id: string }
+  | { type: 'ORDER_ASSIGN_UNSET'; projectId: string; orderId: string }
   | { type: 'ALLOC_SET'; wbsId: string; weekStart: ISODate; hours: number | null }
   | { type: 'CAPACITY_SET'; capacity: Capacity }
   | { type: 'RISK_ADD'; risk: Risk }
@@ -103,6 +110,23 @@ function addLog(
   return { ...state, activity: [...state.activity, entry].slice(-LOG_LIMIT) }
 }
 
+
+/** プロジェクトの使用中オーダーがちょうど1つなら、それを返す */
+function soleActiveOrder(state: AppData, projectId: string): InternalOrder | undefined {
+  const list = state.internalOrders.filter((o) => o.projectId === projectId && o.status === 'active')
+  return list.length === 1 ? list[0] : undefined
+}
+
+/** 作業時間に記録するオーダー。指定が無ければ（そのプロジェクトのオーダーが1つだけなら）それを使う。他プロジェクトのオーダーは無効 */
+function orderOf(state: AppData, projectId: string, ...wanted: (string | undefined)[]): string | undefined {
+  for (const id of wanted) {
+    if (id && state.internalOrders.some((o) => o.id === id && o.projectId === projectId)) return id
+  }
+  return soleActiveOrder(state, projectId)?.id
+}
+
+const orderCodeOf = (state: AppData) => (id: string | null | undefined) => state.internalOrders.find((o) => o.id === id)?.code ?? ''
+
 const wbsTitle = (state: AppData) => (id: string | undefined) => state.wbs.find((w) => w.id === id)?.title ?? '（なし）'
 
 /** 状態・残りの更新日を維持しつつ、WBS の項目を更新する */
@@ -121,8 +145,10 @@ export function reducer(state: AppData, action: Action): AppData {
   switch (action.type) {
     /* ---------------- プロジェクト ---------------- */
     case 'PROJECT_ADD': {
-      const s = { ...state, projects: [...state.projects, action.project], wbs: [...state.wbs, ...action.items] }
-      return addLog(s, meta, { entityType: 'project', entityId: action.project.id, projectId: action.project.id, action: 'create', summary: `プロジェクト「${action.project.name}」を追加` })
+      const orders = action.orders ?? []
+      const s = { ...state, projects: [...state.projects, action.project], wbs: [...state.wbs, ...action.items], internalOrders: [...state.internalOrders, ...orders] }
+      const note = orders.length > 0 ? `（社内オーダー ${orders.map((o) => o.code).join('・')}）` : ''
+      return addLog(s, meta, { entityType: 'project', entityId: action.project.id, projectId: action.project.id, action: 'create', summary: `プロジェクト「${action.project.name}」を追加${note}` })
     }
     case 'PROJECT_UPDATE': {
       const before = state.projects.find((p) => p.id === action.id)
@@ -141,6 +167,7 @@ export function reducer(state: AppData, action: Action): AppData {
         projects: state.projects.filter((x) => x.id !== action.id),
         wbs: state.wbs.filter((w) => w.projectId !== action.id),
         timeEntries: state.timeEntries.filter((e) => !gone.has(e.wbsId)),
+        internalOrders: state.internalOrders.filter((o) => o.projectId !== action.id),
         risks: state.risks.filter((r) => r.projectId !== action.id),
         assignments: state.assignments.filter((a) => !(a.targetType === 'project' && a.targetId === action.id)),
         allocationOverrides: state.allocationOverrides.filter((o) => !gone.has(o.wbsId)),
@@ -158,7 +185,10 @@ export function reducer(state: AppData, action: Action): AppData {
     }
     case 'WBS_ADD_MANY': {
       if (action.items.length === 0) return state
-      const s = { ...state, wbs: [...state.wbs, ...action.items] }
+      // 使用中のオーダーがちょうど1つのプロジェクトなら、追加するタスクをそのオーダーに計上する
+      const only = soleActiveOrder(state, action.items[0].projectId)
+      const items = only ? action.items.map((i) => (i.type === 'task' && !i.orderId ? { ...i, orderId: only.id } : i)) : action.items
+      const s = { ...state, wbs: [...state.wbs, ...items] }
       return addLog(s, meta, { entityType: 'wbs', entityId: action.items[0].id, projectId: action.items[0].projectId, action: 'create', summary: `テンプレートから作業項目を${action.items.length}件追加` })
     }
     case 'WBS_UPDATE': {
@@ -166,7 +196,7 @@ export function reducer(state: AppData, action: Action): AppData {
       if (!before) return state
       const after = applyWbsPatch(before, action.patch, meta.today)
       const s = { ...state, wbs: state.wbs.map((w) => (w.id === action.id ? after : w)) }
-      const d = describeWbsChange(before, after, state.users, wbsTitle(state))
+      const d = describeWbsChange(before, after, state.users, wbsTitle(state), orderCodeOf(state))
       if (!d) return s
       return addLog(s, meta, { entityType: 'wbs', entityId: action.id, projectId: before.projectId, action: 'update', ...d })
     }
@@ -238,14 +268,15 @@ export function reducer(state: AppData, action: Action): AppData {
         hours > 0 || p.comment.trim() !== ''
           ? [
               ...state.timeEntries,
-              { id: newId('te'), userId: p.userId, projectId: item.projectId, wbsId: p.wbsId, date: p.date, hours, comment: p.comment.trim() },
+              { id: newId('te'), userId: p.userId, projectId: item.projectId, wbsId: p.wbsId, date: p.date, hours, comment: p.comment.trim(), orderId: orderOf(state, item.projectId, p.orderId, item.orderId) },
             ]
           : state.timeEntries
       const after = applyWbsPatch(item, { etcHours: next.etc, progress: next.progress, status: next.status }, meta.today)
       // 入力した日を「残りの更新日」にする（値が同じでも確認したことを残す）
       after.etcUpdatedAt = meta.today
       const s = { ...state, timeEntries: entries, wbs: state.wbs.map((w) => (w.id === p.wbsId ? after : w)) }
-      const parts = [`${nameOf(p.userId)}が${item.title}に${fmtNum(hours)}hを記録`]
+      const code = state.internalOrders.find((o) => o.id === orderOf(state, item.projectId, p.orderId, item.orderId))?.code
+      const parts = [`${nameOf(p.userId)}が${item.title}に${fmtNum(hours)}hを記録${code ? `（オーダー ${code}）` : ''}`]
       if (item.etcHours !== next.etc) parts.push(`残り ${fmtNum(item.etcHours)}h→${fmtNum(next.etc)}h`)
       if (item.progress !== next.progress) parts.push(`進捗 ${item.progress}%→${next.progress}%`)
       return addLog(s, meta, { entityType: 'time_entry', entityId: p.wbsId, projectId: item.projectId, action: 'create', summary: parts.join(' / ') })
@@ -256,6 +287,46 @@ export function reducer(state: AppData, action: Action): AppData {
       const s = { ...state, timeEntries: state.timeEntries.filter((x) => x.id !== action.id) }
       const title = state.wbs.find((w) => w.id === e.wbsId)?.title ?? ''
       return addLog(s, meta, { entityType: 'time_entry', entityId: e.wbsId, projectId: e.projectId, action: 'delete', summary: `${title}の作業時間 ${fmtNum(e.hours)}h の記録を取り消し` })
+    }
+
+    /* ---------------- 社内オーダー ---------------- */
+    case 'ORDER_ADD': {
+      const o = action.order
+      const s = { ...state, internalOrders: [...state.internalOrders, o] }
+      return addLog(s, meta, { entityType: 'order', entityId: o.id, projectId: o.projectId, action: 'create', summary: `社内オーダー「${o.code} ${o.name}」を追加` })
+    }
+    case 'ORDER_UPDATE': {
+      const before = state.internalOrders.find((o) => o.id === action.id)
+      if (!before) return state
+      const after = { ...before, ...action.patch }
+      const s = { ...state, internalOrders: state.internalOrders.map((o) => (o.id === action.id ? after : o)) }
+      const verb = action.patch.status && action.patch.status !== before.status ? (action.patch.status === 'closed' ? '終了' : '再開') : '更新'
+      return addLog(s, meta, { entityType: 'order', entityId: action.id, projectId: before.projectId, action: 'update', summary: `社内オーダー「${after.code} ${after.name}」を${verb}` })
+    }
+    case 'ORDER_DELETE': {
+      const o = state.internalOrders.find((x) => x.id === action.id)
+      if (!o) return state
+      // 参照している作業・作業時間は「オーダー未設定」に戻す
+      const s: AppData = {
+        ...state,
+        internalOrders: state.internalOrders.filter((x) => x.id !== action.id),
+        wbs: state.wbs.map((w) => (w.orderId === action.id ? { ...w, orderId: undefined } : w)),
+        timeEntries: state.timeEntries.map((e) => (e.orderId === action.id ? { ...e, orderId: undefined } : e)),
+      }
+      return addLog(s, meta, { entityType: 'order', entityId: action.id, projectId: o.projectId, action: 'delete', summary: `社内オーダー「${o.code} ${o.name}」を削除` })
+    }
+    case 'ORDER_ASSIGN_UNSET': {
+      const o = state.internalOrders.find((x) => x.id === action.orderId && x.projectId === action.projectId)
+      if (!o) return state
+      let entries = 0
+      let tasks = 0
+      const s: AppData = {
+        ...state,
+        timeEntries: state.timeEntries.map((e) => (e.projectId === action.projectId && !e.orderId ? (entries++, { ...e, orderId: o.id }) : e)),
+        wbs: state.wbs.map((w) => (w.projectId === action.projectId && !w.orderId && w.type !== 'milestone' && !state.wbs.some((c) => c.parentId === w.id) ? (tasks++, { ...w, orderId: o.id }) : w)),
+      }
+      if (entries === 0 && tasks === 0) return state
+      return addLog(s, meta, { entityType: 'order', entityId: o.id, projectId: o.projectId, action: 'update', summary: `オーダー未設定の作業時間${entries}件・作業${tasks}件を「${o.code}」に割り当て` })
     }
 
     /* ---------------- 稼働・週別配分 ---------------- */

@@ -66,6 +66,15 @@ describe('権限（画面側の制御。本番ではGAS側でも同じ検証を�
     expect(can(member, 'time.log', { targetUserId: 'other' })).toBe(false)
   })
 
+  it('社内オーダーの登録は 課長以上 / そのプロジェクトのリーダー。レポートの出力はリーダー以上', () => {
+    expect(can(leader, 'order.edit', { project })).toBe(true)
+    expect(can(leader, 'order.edit', { project: { ...project, ownerId: 'other' } })).toBe(false)
+    expect(can(member, 'order.edit', { project })).toBe(false)
+    expect(can(manager, 'order.edit', { project })).toBe(true)
+    for (const x of [admin, manager, leader]) expect(can(x, 'report.export')).toBe(true)
+    for (const x of [member, viewer]) expect(can(x, 'report.export')).toBe(false)
+  })
+
   it('操作できない理由が日本語で返る', () => {
     expect(denyReason('admin.access')).toContain('管理者')
     expect(denyReason('pipeline.decide')).toContain('課長')

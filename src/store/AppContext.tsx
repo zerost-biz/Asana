@@ -21,6 +21,7 @@ import type {
   EntityType,
   Experience,
   GrowthFocus,
+  InternalOrder,
   Opportunity,
   OppStage,
   Project,
@@ -52,10 +53,12 @@ export interface NewProjectInput {
   ownerIds: string[]
   roleNeeds?: Project['roleNeeds']
   opportunityId?: string
+  /** 最初の社内オーダー番号（任意）。入力すると、このオーダーを登録して作業・作業時間をそこへ計上する */
+  orderCode?: string
 }
 
 export type NewWbsInput = Pick<WbsItem, 'projectId' | 'parentId' | 'type' | 'title' | 'ownerId' | 'startDate' | 'endDate' | 'planHours' | 'etcHours' | 'progress' | 'status' | 'priority'> &
-  Partial<Pick<WbsItem, 'description' | 'predecessorId' | 'deliverableUrl' | 'comment'>>
+  Partial<Pick<WbsItem, 'description' | 'predecessorId' | 'deliverableUrl' | 'comment' | 'orderId'>>
 
 export interface ProposeInput {
   targetType: 'project' | 'opportunity'
@@ -91,6 +94,12 @@ export interface AppActions {
   /** 作業時間の記録を追加し、作業項目の残り・進捗・状態を更新する */
   logWork: (payload: LogWorkPayload) => void
   deleteEntry: (id: string) => void
+  /** 社内オーダーの登録・変更・削除（番号は全プロジェクトで一意）。登録したオーダーのidを返す */
+  addOrder: (order: Omit<InternalOrder, 'id'>) => string
+  updateOrder: (id: string, patch: Partial<Omit<InternalOrder, 'id' | 'projectId'>>) => void
+  deleteOrder: (id: string) => void
+  /** プロジェクトの「オーダー未設定」の作業時間・作業を、まとめて指定のオーダーに計上する */
+  assignUnsetToOrder: (projectId: string, orderId: string) => void
   setAllocation: (wbsId: string, weekStart: string, hours: number | null) => void
   setCapacity: (capacity: Capacity) => void
   addRisk: (input: Omit<Risk, 'id' | 'createdAt'>) => void
@@ -223,9 +232,13 @@ function AppRuntime({ initial, children }: { initial: AppData; children: ReactNo
           roleNeeds: input.roleNeeds ?? [],
           opportunityId: input.opportunityId,
         }
-        const items =
+        const order: InternalOrder | undefined = input.orderCode?.trim()
+          ? { id: newId('io'), projectId: id, code: input.orderCode.trim(), name: input.name, status: 'active' }
+          : undefined
+        const items = (
           input.template === 'standard' ? buildTemplateItems(id, input.startDate, input.endDate, input.ownerIds, newId, t()) : []
-        send({ type: 'PROJECT_ADD', project, items })
+        ).map((i) => (order && i.type === 'task' ? { ...i, orderId: order.id } : i))
+        send({ type: 'PROJECT_ADD', project, items, orders: order ? [order] : [] })
         return id
       },
       updateProject: (id, patch) => send({ type: 'PROJECT_UPDATE', id, patch }),
@@ -253,6 +266,14 @@ function AppRuntime({ initial, children }: { initial: AppData; children: ReactNo
       moveWbs: (id, dir) => send({ type: 'WBS_MOVE', id, dir }),
       logWork: (payload) => send({ type: 'LOG_WORK', payload }),
       deleteEntry: (id) => send({ type: 'ENTRY_DELETE', id }),
+      addOrder: (order) => {
+        const o: InternalOrder = { ...order, id: newId('io') }
+        send({ type: 'ORDER_ADD', order: o })
+        return o.id
+      },
+      updateOrder: (id, patch) => send({ type: 'ORDER_UPDATE', id, patch }),
+      deleteOrder: (id) => send({ type: 'ORDER_DELETE', id }),
+      assignUnsetToOrder: (projectId, orderId) => send({ type: 'ORDER_ASSIGN_UNSET', projectId, orderId }),
       setAllocation: (wbsId, weekStart, hours) => send({ type: 'ALLOC_SET', wbsId, weekStart, hours }),
       setCapacity: (capacity) => send({ type: 'CAPACITY_SET', capacity }),
       addRisk: (input) => send({ type: 'RISK_ADD', risk: { ...input, id: newId('r'), createdAt: t() } }),

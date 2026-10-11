@@ -612,3 +612,10 @@ select.input {
   color: var(--text-3);
   font-weight: 600;
 }
+
+.history__order {
+  font-style: normal;
+  font-weight: 700;
+  font-size: 11px;
+  color: var(--accent-strong);
+}

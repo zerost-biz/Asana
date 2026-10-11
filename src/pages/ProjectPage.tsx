@@ -1,5 +1,6 @@
 import { Outlet, useParams } from 'react-router-dom'
 import { ProjectDashboard } from '../components/ProjectDashboard'
+import { OrdersView } from '../components/OrdersView'
 import { ProjectCloseView } from '../components/ProjectCloseView'
 import { ProjectHeader } from '../components/ProjectHeader'
 import { ProjectOverview } from '../components/ProjectOverview'
@@ -52,6 +53,12 @@ export function ProjectOverviewView() {
 export function ProjectCloseRoute() {
   const { projectId = '' } = useParams()
   return <ProjectCloseView projectId={projectId} />
+}
+
+/** 社内オーダータブ */
+export function ProjectOrdersView() {
+  const { projectId = '' } = useParams()
+  return <OrdersView projectId={projectId} />
 }
 
 /** リスクタブ */

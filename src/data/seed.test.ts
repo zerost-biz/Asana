@@ -79,6 +79,18 @@ describe('デモデータ（seed）の受入基準', () => {
     expect(seed.closes.some((c) => c.status === 'closed')).toBe(true)
   })
 
+  it('社内オーダー: プロジェクトごとに登録され、作業時間はすべて同じプロジェクトのオーダーに計上されている', () => {
+    expect(seed.internalOrders.length).toBeGreaterThanOrEqual(6)
+    expect(new Set(seed.internalOrders.map((o) => o.code)).size).toBe(seed.internalOrders.length) // 番号は一意
+    expect(seed.internalOrders.some((o) => o.status === 'closed')).toBe(true)
+    expect(seed.internalOrders.filter((o) => o.projectId === 'bmes')).toHaveLength(2) // 複数オーダーのデモ
+    for (const e of seed.timeEntries) {
+      const o = seed.internalOrders.find((x) => x.id === e.orderId)
+      expect(o?.projectId, e.id).toBe(e.projectId)
+    }
+    for (const w of seed.wbs.filter((x) => x.type === 'milestone')) expect(w.orderId).toBeUndefined()
+  })
+
   it('ユーザー: 管理者・リーダー・担当メンバーがいて、既定の操作ユーザーは管理者（課長）', () => {
     expect(new Set(seed.users.map((u) => u.role))).toEqual(new Set(['admin', 'leader', 'member']))
     expect(seed.users.find((u) => u.id === seed.currentUserId)!.role).toBe('admin')

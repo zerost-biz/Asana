@@ -6,6 +6,7 @@ import type {
   Customer,
   Experience,
   GrowthFocus,
+  InternalOrder,
   Opportunity,
   OppStage,
   Priority,
@@ -338,6 +339,22 @@ const PROJECTS: ProjectDef[] = [
   },
 ]
 
+/** 社内オーダー（プロジェクトごと）。作業は最上位フェーズの順に、オーダーを割り当てる（足りなければ最後のオーダー） */
+const ORDER_DEFS: Record<string, { code: string; name: string; status?: 'active' | 'closed'; note?: string }[]> = {
+  bmes: [
+    { code: 'IO-2601-001', name: 'B社 MES構想（現状分析）', note: '現状分析フェーズの実績を計上' },
+    { code: 'IO-2601-002', name: 'B社 MES構想（To-Be設計・ロードマップ）' },
+  ],
+  asaas: [{ code: 'IO-2601-010', name: 'A社 SaaS導入（構築・展開）' }],
+  cscada: [
+    { code: 'IO-2601-020', name: 'C社 SCADA（現状調査）', status: 'closed', note: '現状調査は完了のため終了' },
+    { code: 'IO-2601-021', name: 'C社 SCADA（PoC構築・現場実証）' },
+  ],
+  gtm: [{ code: 'IO-2601-090', name: '新商材GTM（社内投資）', note: '社内プロジェクト用' }],
+  aold: [{ code: 'IO-2501-005', name: 'A社 業務診断（完了）', status: 'closed' }],
+}
+const orderId = (projectId: string, n: number) => `io-${projectId}-${n + 1}`
+
 /** 工数入力コメントの例（ダミー） */
 const ENTRY_COMMENTS = ['打合せ・内容整理', '資料作成', 'レビュー・修正対応', '', '調査・検討', '顧客確認対応']
 
@@ -351,6 +368,7 @@ function spreadEntries(
   act: number,
   today: Date,
   seq: { n: number },
+  orderId?: string,
 ): TimeEntry[] {
   if (act <= 0) return []
   const start = parseDate(startISO)
@@ -376,6 +394,7 @@ function spreadEntries(
       date: toISO(d),
       hours: u / 2,
       comment: ENTRY_COMMENTS[seq.n % ENTRY_COMMENTS.length],
+      orderId,
     })
   })
   return out
@@ -436,6 +455,7 @@ export function createSeed(today: Date): AppData {
         priority: n.pri ?? 'medium',
         predecessorId: n.pre ? codeToId.get(n.pre) : undefined,
         deliverableUrl: n.url, comment: n.c,
+        orderId: type === 'milestone' ? undefined : orderId(p.id, Math.min(path[0] - 1, (ORDER_DEFS[p.id]?.length ?? 1) - 1)),
         baselinePlanHours: n.basePlan ?? n.plan ?? 0,
         baselineStart: at(n.s ?? 0),
         baselineEnd: at(n.baseEnd ?? n.e ?? 0),
@@ -443,7 +463,7 @@ export function createSeed(today: Date): AppData {
         etcUpdatedAt: ago(n.etcAge ?? 1),
       }
       wbs.push(item)
-      if (n.o && (n.act ?? 0) > 0) timeEntries.push(...spreadEntries(id, p.id, n.o, item.startDate, item.endDate, n.act!, today, seq))
+      if (n.o && (n.act ?? 0) > 0) timeEntries.push(...spreadEntries(id, p.id, n.o, item.startDate, item.endDate, n.act!, today, seq, item.orderId))
       return { start: n.s ?? 0, end: n.e ?? 0 }
     }
     p.tree.forEach((n, i) => build(n, [i + 1], null, 0))
@@ -454,6 +474,10 @@ export function createSeed(today: Date): AppData {
     startDate: at(p.s), endDate: at(p.e), priority: p.priority, health: null, budget: p.budget,
     description: p.description, roleNeeds: p.roleNeeds, opportunityId: p.opportunityId,
   }))
+
+  const internalOrders: InternalOrder[] = Object.entries(ORDER_DEFS).flatMap(([projectId, list]) =>
+    list.map((o, i) => ({ id: orderId(projectId, i), projectId, code: o.code, name: o.name, status: o.status ?? 'active', note: o.note })),
+  )
 
   const risks: Risk[] = [
     { id: 'r-b1', projectId: 'bmes', wbsId: 'bmes-2-2', kind: 'risk', severity: 'low', probability: 'medium', title: '構想の論点増加によるMES構想の工数膨張', ownerId: K, status: 'mitigating', createdAt: ago(10) },
@@ -638,6 +662,7 @@ export function createSeed(today: Date): AppData {
     projects,
     wbs,
     timeEntries,
+    internalOrders,
     assignments,
     allocationOverrides: [],
     capacities,

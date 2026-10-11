@@ -9,6 +9,7 @@ import { useToast } from '../components/Toast'
 import { cx } from '../components/cx'
 import { fmtDateTime } from '../domain/dates'
 import { DEFAULT_SETTINGS, ROLE_LABEL, type EntityType, type Role, type Settings } from '../domain/types'
+import { saveTextFile } from '../platform/saveFile'
 import { STORAGE_KEY } from '../repository'
 import { useApp } from '../store/AppContext'
 
@@ -35,6 +36,7 @@ const ENTITY_LABEL: Record<EntityType, string> = {
   close: '完了',
   setting: '設定',
   capacity: '稼働',
+  order: '社内オーダー',
 }
 
 /** 管理: メンバー・単価・スキル・顧客・役割・設定・更新履歴（管理者のみ） */
@@ -442,41 +444,20 @@ function AuditTab() {
 
 /* ---------------- データ ---------------- */
 
-/** 単一HTML版（プレビュー等）はファイルのダウンロードが使えないので、クリップボードへコピーする */
-const CLIPBOARD_ONLY = import.meta.env.VITE_ROUTER === 'memory'
-
-async function copyJson(json: string): Promise<string> {
-  await navigator.clipboard.writeText(json)
-  return 'データ（JSON）をクリップボードにコピーしました'
-}
-
-async function downloadJson(json: string, seededOn: string): Promise<string> {
-  const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }))
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `project-delivery-os-${seededOn}.json`
-  a.click()
-  URL.revokeObjectURL(url)
-  return 'データをJSONで書き出しました'
-}
-
-const saveJson = CLIPBOARD_ONLY ? (json: string) => copyJson(json) : downloadJson
-
 function DataTab() {
   const { data, actions } = useApp()
   const { toast } = useToast()
   const [confirm, setConfirm] = useState(false)
   const exportJson = async () => {
-    try {
-      toast(await saveJson(JSON.stringify(data, null, 2), data.seededOn))
-    } catch {
-      toast('この表示環境では書き出し・コピーができません', 'info')
-    }
+    const r = await saveTextFile(`project-delivery-os-${data.seededOn}.json`, JSON.stringify(data, null, 2), 'application/json')
+    if (r === 'saved') toast('データをJSONで書き出しました')
+    else if (r === 'failed') toast('この表示環境では書き出しできません', 'info')
   }
   const counts: [string, number][] = [
     ['プロジェクト', data.projects.length],
     ['作業項目', data.wbs.length],
     ['作業時間の記録', data.timeEntries.length],
+    ['社内オーダー', data.internalOrders.length],
     ['受注見込み', data.opportunities.length],
     ['配置', data.assignments.length],
     ['リスク・課題', data.risks.length],
@@ -497,7 +478,7 @@ function DataTab() {
         </dl>
         <div className="decide" style={{ marginTop: 16 }}>
           <button type="button" className="btn btn--ghost" onClick={exportJson}>
-            <Download size={15} /> {CLIPBOARD_ONLY ? 'JSONをコピー' : 'JSONで書き出す'}
+            <Download size={15} /> JSONで書き出す
           </button>
           <button type="button" className="btn btn--ghost" onClick={() => setConfirm(true)}>
             <RotateCcw size={15} /> デモデータに初期化

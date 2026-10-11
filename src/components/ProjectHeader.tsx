@@ -16,6 +16,7 @@ const TABS = [
   { to: 'dashboard', label: 'ダッシュボード', end: false },
   { to: 'workload', label: '稼働状況', end: false },
   { to: 'risks', label: 'リスク', end: false },
+  { to: 'orders', label: '社内オーダー', end: false },
 ]
 
 export function ProjectHeader({ summary }: { summary: ProjectSummary }) {

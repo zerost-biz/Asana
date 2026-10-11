@@ -1,4 +1,4 @@
-import { ClipboardCheck, Filter, FolderKanban, Gauge, House, Network, Plus, ShieldCheck, UserCheck, Users } from 'lucide-react'
+import { ClipboardCheck, FileSpreadsheet, Filter, FolderKanban, Gauge, House, Network, Plus, ShieldCheck, UserCheck, Users } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { useApp } from '../store/AppContext'
 import { GlossaryButton } from './GlossaryDialog'
@@ -68,6 +68,12 @@ export function Sidebar() {
           <ClipboardCheck size={18} />
           <span>週次レビュー</span>
         </NavLink>
+        {can('report.export') && (
+          <NavLink to="/reports" className={link}>
+            <FileSpreadsheet size={18} />
+            <span>レポート</span>
+          </NavLink>
+        )}
         {can('admin.access') && (
           <NavLink to="/admin" className={link}>
             <ShieldCheck size={18} />

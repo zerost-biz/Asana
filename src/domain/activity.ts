@@ -4,7 +4,7 @@ import { WBS_STATUS_LABEL, WBS_TYPE_LABEL, PRIORITY_LABEL, type User, type WbsIt
 
 const TRACKED: (keyof WbsItem)[] = [
   'title', 'type', 'ownerId', 'startDate', 'endDate', 'planHours', 'etcHours', 'progress', 'status',
-  'priority', 'predecessorId', 'deliverableUrl', 'description',
+  'priority', 'predecessorId', 'deliverableUrl', 'description', 'orderId',
 ]
 
 /** 作業項目の変更を、更新履歴に出す1行の説明にする */
@@ -13,6 +13,7 @@ export function describeWbsChange(
   after: WbsItem,
   users: User[],
   title: (id: string | undefined) => string,
+  orderCode: (id: string | null | undefined) => string = () => '',
 ): { summary: string; before: Record<string, unknown>; after: Record<string, unknown> } | null {
   const name = (id: string | null | undefined) => (id ? users.find((u) => u.id === id)?.name ?? id : '未設定')
   const parts: string[] = []
@@ -36,6 +37,7 @@ export function describeWbsChange(
       case 'predecessorId': parts.push(`先行 ${title(before.predecessorId)}→${title(after.predecessorId)}`); break
       case 'deliverableUrl': parts.push('成果物のURLを変更'); break
       case 'description': parts.push('説明を変更'); break
+      case 'orderId': parts.push(`社内オーダー ${orderCode(before.orderId) || '未設定'}→${orderCode(after.orderId) || '未設定'}`); break
     }
   }
   if (parts.length === 0) return null

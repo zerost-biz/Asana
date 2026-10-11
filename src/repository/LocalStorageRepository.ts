@@ -8,9 +8,20 @@ const isArr = (v: unknown): v is unknown[] => Array.isArray(v)
 
 const COLLECTIONS = [
   'users', 'skills', 'userSkills', 'growthFocus', 'customers', 'opportunities', 'projects', 'wbs',
-  'timeEntries', 'assignments', 'allocationOverrides', 'capacities', 'risks', 'experiences', 'closes',
+  'timeEntries', 'internalOrders', 'assignments', 'allocationOverrides', 'capacities', 'risks', 'experiences', 'closes',
   'activity', 'reviewNotes',
 ] as const
+
+/**
+ * 古い形式の保存データを、いまの形に直す（捨てずに引き継ぐ）。
+ *  - 社内オーダー導入前のデータには internalOrders が無いので、空で補う
+ */
+export function migrate(raw: unknown): unknown {
+  if (raw && typeof raw === 'object' && !Array.isArray((raw as Record<string, unknown>).internalOrders)) {
+    return { ...(raw as Record<string, unknown>), internalOrders: [] }
+  }
+  return raw
+}
 
 function isValid(d: unknown): d is AppData {
   if (!d || typeof d !== 'object') return false
@@ -28,7 +39,7 @@ export class LocalStorageRepository implements Repository {
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY)
       if (!raw) return null
-      const parsed: unknown = JSON.parse(raw)
+      const parsed = migrate(JSON.parse(raw))
       return isValid(parsed) ? parsed : null
     } catch {
       return null
@@ -60,7 +71,7 @@ export class LocalStorageRepository implements Repository {
     const handler = (e: StorageEvent) => {
       if (e.key !== STORAGE_KEY || !e.newValue) return
       try {
-        const parsed: unknown = JSON.parse(e.newValue)
+        const parsed = migrate(JSON.parse(e.newValue))
         if (isValid(parsed)) onChange(parsed)
       } catch {
         /* ignore */

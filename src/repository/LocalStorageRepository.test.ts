@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createSeed } from '../data/seed'
 import { MONDAY } from '../test/factories'
-import { LocalStorageRepository, STORAGE_KEY, isStorageAvailable } from './LocalStorageRepository'
+import { LocalStorageRepository, STORAGE_KEY, isStorageAvailable, migrate } from './LocalStorageRepository'
 
 /** window.localStorage の最小の代用品（Node 環境でも保存・復元の挙動を確かめる） */
 function stubStorage(opts: { throwOnSet?: boolean } = {}) {
@@ -45,6 +45,17 @@ describe('LocalStorageRepository（保存・復元・初期化）', () => {
     expect(store.has(STORAGE_KEY)).toBe(true)
     await repo.clear()
     expect(await repo.load()).toBeNull()
+  })
+
+  it('社内オーダー導入前の保存データ（internalOrders なし）は、捨てずに空のオーダーを補って読み込む', async () => {
+    const { store } = stubStorage()
+    const old = createSeed(MONDAY) as unknown as Record<string, unknown>
+    delete old.internalOrders
+    store.set(STORAGE_KEY, JSON.stringify({ ...old, settings: { ...(old.settings as object), mission: '移行前' } }))
+    const loaded = await new LocalStorageRepository().load()
+    expect(loaded?.internalOrders).toEqual([])
+    expect(loaded?.settings.mission).toBe('移行前')
+    expect(migrate(null)).toBeNull()
   })
 
   it('壊れたデータ・古い形式のデータは破棄して null を返す', async () => {

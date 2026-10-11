@@ -22,6 +22,8 @@ export type Action =
   | 'wbs.progress' // 自分の担当の 残り・進捗・状態・コメント
   | 'risk.edit'
   | 'time.log'
+  | 'order.edit' // プロジェクトの社内オーダーの登録・変更
+  | 'report.export' // 締め期間のレポート（CSV）の出力
   | 'pipeline.edit'
   | 'pipeline.decide' // PJ化の判断
   | 'assignment.propose'
@@ -55,6 +57,7 @@ export function can(user: User | undefined, action: Action, ctx: Ctx = {}): bool
     case 'assignment.confirm':
       return atLeast(user, 'manager')
     case 'project.edit':
+    case 'order.edit':
     case 'wbs.structure':
     case 'risk.edit':
     case 'close.edit':
@@ -63,6 +66,8 @@ export function can(user: User | undefined, action: Action, ctx: Ctx = {}): bool
       return (
         can(user, 'wbs.structure', ctx) || (atLeast(user, 'member') && !!ctx.wbs && ctx.wbs.ownerId === user.id)
       )
+    case 'report.export':
+      return atLeast(user, 'leader')
     case 'time.log':
       return atLeast(user, 'member') && (!ctx.targetUserId || self)
     case 'assignment.propose':
@@ -93,6 +98,7 @@ export function denyReason(action: Action): string {
     case 'assignment.confirm':
       return '課長（マネージャー）以上の権限が必要です'
     case 'project.edit':
+    case 'order.edit':
     case 'wbs.structure':
     case 'risk.edit':
     case 'close.edit':
@@ -102,6 +108,7 @@ export function denyReason(action: Action): string {
     case 'time.log':
       return '自分の作業時間のみ入力できます'
     case 'assignment.propose':
+    case 'report.export':
       return 'リーダー以上の権限が必要です'
     case 'capacity.edit':
     case 'skill.edit':

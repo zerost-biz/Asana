@@ -230,6 +230,8 @@ export interface WbsItem {
   predecessorId?: string
   /** 成果物のURL（Drive等） */
   deliverableUrl?: string
+  /** 社内オーダー（作業時間を計上するオーダー）。未設定なら「オーダー未設定」として集計される */
+  orderId?: string
   /** タスクメモ */
   comment?: string
   /** 当初計画（再計画してもここは変えない） */
@@ -251,6 +253,22 @@ export interface TimeEntry {
   /** 実績工数 (h) */
   hours: number
   comment: string
+  /** 作業時間を計上した社内オーダー（入力時の作業のオーダー。レポートの集計キー） */
+  orderId?: string
+}
+
+/**
+ * 社内オーダー: プロジェクトごとに登録する、作業時間・人件費の計上先（内部オーダー番号）。
+ * 番号は会社全体で一意。「終了」にすると新しい入力では選べなくなるが、過去の集計は残る。
+ */
+export interface InternalOrder {
+  id: string
+  projectId: string
+  /** オーダー番号（例: IO-2601-001）。全プロジェクトで重複不可 */
+  code: string
+  name: string
+  status: 'active' | 'closed'
+  note?: string
 }
 
 /** 週別の配置（仮アサイン/確定）。1回の配置操作 = 期間内の複数週分の行 */
@@ -361,6 +379,7 @@ export type EntityType =
   | 'close'
   | 'setting'
   | 'capacity'
+  | 'order'
 
 export interface ActivityLog {
   id: string
@@ -450,6 +469,7 @@ export interface AppData {
   projects: Project[]
   wbs: WbsItem[]
   timeEntries: TimeEntry[]
+  internalOrders: InternalOrder[]
   assignments: Assignment[]
   allocationOverrides: AllocationOverride[]
   capacities: Capacity[]

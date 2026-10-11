@@ -24,6 +24,7 @@ export function ProjectOverview({ projectId }: { projectId: string }) {
   const customer = customerById.get(project.customerId)
   const opp = project.opportunityId ? data.opportunities.find((o) => o.id === project.opportunityId) : undefined
 
+  const projectOrders = data.internalOrders.filter((o) => o.projectId === projectId)
   const milestones = summary.leaves
     .filter((l) => l.type === 'milestone')
     .sort((a, b) => (a.endDate < b.endDate ? -1 : 1))
@@ -76,6 +77,22 @@ export function ProjectOverview({ projectId }: { projectId: string }) {
               <dt>工数</dt>
               <dd>
                 計画 {fmtNum(totals.plan)}h / 実績 {fmtNum(totals.act)}h / 見込み {fmtNum(totals.eac)}h
+              </dd>
+            </div>
+            <div>
+              <dt>社内オーダー</dt>
+              <dd>
+                {projectOrders.length > 0 ? (
+                  projectOrders.map((o) => (
+                    <span key={o.id} className={cx('chip', o.status === 'closed' && 'chip--warn')} title={`${o.name}${o.status === 'closed' ? '（終了）' : ''}`}>
+                      {o.code}
+                    </span>
+                  ))
+                ) : (
+                  <Link className="link-btn" to={`/projects/${projectId}/orders`}>
+                    登録する
+                  </Link>
+                )}
               </dd>
             </div>
             {opp && (

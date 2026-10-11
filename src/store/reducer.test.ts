@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { buildTemplateItems, templateTaskCount, templateTotalHours } from '../data/templates'
 import { createSeed } from '../data/seed'
 import { MONDAY, MONDAY_ISO } from '../test/factories'
-import type { Assignment, Project } from '../domain/types'
+import type { Assignment, InternalOrder, Project } from '../domain/types'
 import { buildDerived } from './derived'
 import { reducer, type Body } from './reducer'
 
@@ -233,5 +233,94 @@ describe('設定・履歴・初期化', () => {
   it('RESET / LOAD は与えられたデータに置き換わる', () => {
     expect(reducer(seed, { type: 'RESET', data: createSeed(MONDAY) }).currentUserId).toBe(seed.currentUserId)
     expect(reducer(seed, { type: 'LOAD', data: { ...seed, currentUserId: 'u-s' } }).currentUserId).toBe('u-s')
+  })
+})
+
+describe('社内オーダー', () => {
+  const bmesOrders = seed.internalOrders.filter((o) => o.projectId === 'bmes')
+  const order = (over: Partial<InternalOrder> = {}): InternalOrder => ({ id: 'io-new', projectId: 'bmes', code: 'IO-9999-001', name: 'テスト', status: 'active', ...over })
+
+  it('登録・名称変更・終了・再開が更新履歴に残る', () => {
+    let s = run(seed, { type: 'ORDER_ADD', order: order() })
+    expect(s.internalOrders.some((o) => o.id === 'io-new')).toBe(true)
+    expect(s.activity.at(-1)?.summary).toContain('IO-9999-001')
+    s = run(s, { type: 'ORDER_UPDATE', id: 'io-new', patch: { status: 'closed' } })
+    expect(s.internalOrders.find((o) => o.id === 'io-new')!.status).toBe('closed')
+    expect(s.activity.at(-1)?.summary).toContain('終了')
+    s = run(s, { type: 'ORDER_UPDATE', id: 'io-new', patch: { status: 'active', name: '改名' } })
+    expect(s.activity.at(-1)?.summary).toContain('再開')
+  })
+
+  it('作業時間を入力すると、作業に設定されたオーダーに計上される（選んだオーダーが優先）', () => {
+    const task = seed.wbs.find((w) => w.id === 'bmes-2-1')!
+    expect(task.orderId).toBe(bmesOrders[1].id)
+    const payload = { wbsId: task.id, userId: 'u-h', date: MONDAY_ISO, hours: 2, comment: '', etcHours: task.etcHours, progress: task.progress }
+    const a = run(seed, { type: 'LOG_WORK', payload })
+    expect(a.timeEntries.at(-1)!.orderId).toBe(bmesOrders[1].id)
+    expect(a.activity.at(-1)?.summary).toContain(bmesOrders[1].code)
+    const b = run(seed, { type: 'LOG_WORK', payload: { ...payload, orderId: bmesOrders[0].id } })
+    expect(b.timeEntries.at(-1)!.orderId).toBe(bmesOrders[0].id)
+  })
+
+  it('他のプロジェクトのオーダーは選べない（無効なら、作業のオーダーを使う）', () => {
+    const task = seed.wbs.find((w) => w.id === 'bmes-2-1')!
+    const other = seed.internalOrders.find((o) => o.projectId === 'asaas')!
+    const next = run(seed, { type: 'LOG_WORK', payload: { wbsId: task.id, userId: 'u-h', date: MONDAY_ISO, hours: 1, comment: '', etcHours: 5, progress: 10, orderId: other.id } })
+    expect(next.timeEntries.at(-1)!.orderId).toBe(task.orderId)
+  })
+
+  it('オーダーが1つだけのプロジェクトでは、作業に未設定でもそのオーダーに計上される', () => {
+    const task = seed.wbs.find((w) => w.id === 'asaas-2-1')!
+    const cleared = { ...seed, wbs: seed.wbs.map((w) => (w.id === task.id ? { ...w, orderId: undefined } : w)) }
+    const next = run(cleared, { type: 'LOG_WORK', payload: { wbsId: task.id, userId: 'u-s', date: MONDAY_ISO, hours: 1, comment: '', etcHours: 5, progress: 10 } })
+    expect(next.timeEntries.at(-1)!.orderId).toBe('io-asaas-1')
+  })
+
+  it('テンプレートから作業を追加すると、使用中のオーダーが1つなら自動でそのオーダーに計上する', () => {
+    const items = buildTemplateItems('asaas', '2026-10-12', '2026-12-04', ['u-s'], gen, MONDAY_ISO)
+    const next = run(seed, { type: 'WBS_ADD_MANY', items })
+    const added = next.wbs.filter((w) => items.some((i) => i.id === w.id))
+    expect(added.filter((w) => w.type === 'task').every((w) => w.orderId === 'io-asaas-1')).toBe(true)
+    expect(added.filter((w) => w.type === 'milestone').every((w) => !w.orderId)).toBe(true)
+  })
+
+  it('作業のオーダーを変えると、更新履歴にオーダー番号で残る', () => {
+    const task = seed.wbs.find((w) => w.id === 'bmes-2-1')!
+    const next = run(seed, { type: 'WBS_UPDATE', id: task.id, patch: { orderId: bmesOrders[0].id } })
+    expect(next.activity.at(-1)?.summary).toContain(`${bmesOrders[1].code}→${bmesOrders[0].code}`)
+  })
+
+  it('削除すると、使っていた作業・作業時間は「オーダー未設定」に戻る', () => {
+    const target = bmesOrders[0]
+    const used = seed.timeEntries.filter((e) => e.orderId === target.id).length
+    expect(used).toBeGreaterThan(0)
+    const next = run(seed, { type: 'ORDER_DELETE', id: target.id })
+    expect(next.internalOrders.some((o) => o.id === target.id)).toBe(false)
+    expect(next.timeEntries.filter((e) => e.orderId === target.id)).toHaveLength(0)
+    expect(next.timeEntries).toHaveLength(seed.timeEntries.length) // 作業時間そのものは消えない
+    expect(next.wbs.some((w) => w.orderId === target.id)).toBe(false)
+  })
+
+  it('オーダー未設定の作業時間・作業を、まとめて指定のオーダーに割り当てられる', () => {
+    const cleared = { ...seed, timeEntries: seed.timeEntries.map((e) => (e.projectId === 'bmes' ? { ...e, orderId: undefined } : e)), wbs: seed.wbs.map((w) => (w.projectId === 'bmes' ? { ...w, orderId: undefined } : w)) }
+    const next = run(cleared, { type: 'ORDER_ASSIGN_UNSET', projectId: 'bmes', orderId: bmesOrders[0].id })
+    expect(next.timeEntries.filter((e) => e.projectId === 'bmes').every((e) => e.orderId === bmesOrders[0].id)).toBe(true)
+    expect(next.timeEntries.filter((e) => e.projectId !== 'bmes').every((e) => e.orderId === cleared.timeEntries.find((x) => x.id === e.id)!.orderId)).toBe(true)
+    expect(next.wbs.filter((w) => w.projectId === 'bmes' && w.type === 'task').every((w) => w.orderId === bmesOrders[0].id)).toBe(true)
+    // 親（フェーズ）やマイルストーンには付けない
+    expect(next.wbs.filter((w) => w.projectId === 'bmes' && (w.type === 'phase' || w.type === 'milestone')).every((w) => !w.orderId)).toBe(true)
+    // 他プロジェクトのオーダーは使えない
+    expect(run(cleared, { type: 'ORDER_ASSIGN_UNSET', projectId: 'bmes', orderId: 'io-asaas-1' })).toBe(cleared)
+  })
+
+  it('プロジェクトを追加するときにオーダー番号も登録でき、削除するとオーダーも消える', () => {
+    const items = buildTemplateItems('pord', '2026-10-12', '2026-12-04', ['u-h'], gen, MONDAY_ISO)
+    const o: InternalOrder = { id: 'io-pord', projectId: 'pord', code: 'IO-7777-001', name: 'F社', status: 'active' }
+    const project: Project = { id: 'pord', customerId: 'c-b', name: 'F社', ownerId: 'u-h', status: 'active', startDate: '2026-10-12', endDate: '2026-12-04', priority: 'medium', health: null, description: '', roleNeeds: [] }
+    const added = run(seed, { type: 'PROJECT_ADD', project, items: items.map((i) => (i.type === 'task' ? { ...i, orderId: o.id } : i)), orders: [o] })
+    expect(added.internalOrders.some((x) => x.id === 'io-pord')).toBe(true)
+    expect(added.activity.at(-1)?.summary).toContain('IO-7777-001')
+    const removed = run(added, { type: 'PROJECT_DELETE', id: 'pord' })
+    expect(removed.internalOrders.some((x) => x.id === 'io-pord')).toBe(false)
   })
 })

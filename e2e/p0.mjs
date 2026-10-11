@@ -62,7 +62,7 @@ ok('一覧: 見込み差異が大きい順', (await page.locator('a.pf__row').fi
 await goto(page, '/projects/bmes')
 const ovText = await page.locator('main').innerText()
 ok('概要: 基本情報・マイルストーン・メンバーの負荷・リスク・更新履歴', /プロジェクト情報[\s\S]*マイルストーン[\s\S]*最近の更新/.test(ovText) && /メンバーと今後の負荷/.test(ovText))
-ok('概要: タブ（概要/一覧/タイムライン/ダッシュボード/稼働状況/リスク）', (await page.locator('.tabs .tabs__tab').allInnerTexts()).join('|') === '概要|一覧|タイムライン|ダッシュボード|稼働状況|リスク')
+ok('概要: タブ（概要/一覧/タイムライン/ダッシュボード/稼働状況/リスク/社内オーダー）', (await page.locator('.tabs .tabs__tab').allInnerTexts()).join('|') === '概要|一覧|タイムライン|ダッシュボード|稼働状況|リスク|社内オーダー')
 
 // ---------- WBS: 表示と編集 ----------
 await goto(page, '/projects/bmes/wbs')
