@@ -120,7 +120,7 @@ export function TalentProfilePage() {
             <b>{Math.round((avail?.thisWeek ?? 0) * 100)}%</b>
           </div>
           <div className={cx('pcard__pill', `pcard__pill--${loadLevel(monthLoad, data.settings)}`)}>
-            <small>今後4週（見込み込み）</small>
+            <small>今後4週（受注見込み込み）</small>
             <b>{Math.round(monthLoad * 100)}%</b>
           </div>
           <div className="pcard__pill pcard__pill--free">

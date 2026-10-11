@@ -224,7 +224,7 @@ function Planner({ opp, prj, canPropose, canConfirm, onDone, actions, data, deri
     actions.proposeAssignment({ targetType, targetId, userId: sel.userId, role, weekStarts: chosenWeeks, hoursPerWeek, reason: reason.trim() || undefined })
     onDone(
       <>
-        <strong>{selUser.name}</strong> を「{role}」に仮配置しました（週{fmtNum(hoursPerWeek)}h × {chosenWeeks.length}週）。稼働状況に「見込み」として反映されます
+        <strong>{selUser.name}</strong> を「{role}」に仮配置しました（週{fmtNum(hoursPerWeek)}h × {chosenWeeks.length}週）。稼働状況に「受注見込み分」として反映されます
       </>,
     )
     setSelected(null)
@@ -293,7 +293,7 @@ function Planner({ opp, prj, canPropose, canConfirm, onDone, actions, data, deri
           )}
         </Card>
 
-        <Card title="配置の状況" subtitle="仮配置は「見込み」として稼働状況に反映されます。確定は課長が行います">
+        <Card title="配置の状況" subtitle="仮配置は「受注見込み分」として稼働状況に反映されます。確定は課長が行います">
           {batches.length === 0 ? (
             <div className="empty">まだ配置がありません</div>
           ) : (
@@ -415,7 +415,7 @@ function Planner({ opp, prj, canPropose, canConfirm, onDone, actions, data, deri
 
                       {open && (
                         <div className="cand__panel">
-                          <h4>稼働の変化（見込み込みの負荷率）</h4>
+                          <h4>稼働の変化（受注見込みを含む負荷率）</h4>
                           {outsideWindow && <p className="hint">配置期間が12週先より後のため、稼働状況には表示されません（配置は記録されます）。</p>}
                           <div className="ba" role="table" aria-label="配置前後の負荷">
                             <div className="ba__row ba__row--head">

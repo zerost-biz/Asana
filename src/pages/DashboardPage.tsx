@@ -157,7 +157,7 @@ export function DashboardPage() {
 
           <Card
             title="稼働の見通し"
-            subtitle="予定時間 ÷ 稼働可能時間。見込み込みにすると受注見込みの案件も含めて見られます。セルをクリックで内訳を表示"
+            subtitle="予定時間 ÷ 稼働可能時間。「受注見込みを含む」にすると受注前の案件も含めて見られます。セルをクリックで内訳を表示"
             action={<Link to="/workload" className="link-btn">稼働状況を開く</Link>}
           >
             <WorkloadOutlook />

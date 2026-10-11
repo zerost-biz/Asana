@@ -46,7 +46,7 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react(), ...(single ? [inlineAssets()] : [])],
     server: { port: 5173 },
-    build: single ? { outDir: 'dist-single', assetsInlineLimit: 100_000_000, cssCodeSplit: false } : undefined,
+    build: single ? { outDir: 'dist-single', assetsInlineLimit: 100_000_000, cssCodeSplit: false, chunkSizeWarningLimit: 2000 } : { chunkSizeWarningLimit: 900 },
     test: {
       environment: 'node',
       include: ['src/**/*.test.ts'],

@@ -1,6 +1,6 @@
 import { Check, Flag } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { isOverdue, type Metrics } from '../domain/calculations'
+import { HEALTH_LABEL, isOverdue, type Metrics } from '../domain/calculations'
 import { daysBetween, fmtMD } from '../domain/dates'
 import { fmtDays, fmtNum, fmtPct, fmtSignedH, fmtSignedYen, fmtYen, fmtYenShort } from '../domain/format'
 import type { Health, WbsItem } from '../domain/types'
@@ -89,7 +89,7 @@ export function ProjectDashboard({ projectId }: { projectId: string }) {
 
       <Card
         title="人件費（原価）と粗利"
-        subtitle="作業時間 × 時間単価。実績は入力した人の単価、残りと計画は担当者の単価で計算（単価は 設定 → メンバーと単価）"
+        subtitle="作業時間 × 時間単価。実績は入力した人の単価、残りと計画は担当者の単価で計算（単価は 管理 → メンバー）"
         action={
           <button type="button" className="link-btn" onClick={() => openEdit(projectId)}>
             {cost.budget === null ? '受注額を設定' : '受注額を変更'}
@@ -235,7 +235,7 @@ export function ProjectDashboard({ projectId }: { projectId: string }) {
                 actions.updateProject(project.id, { health: v === 'AUTO' ? null : (v as Health) })
               }}
             >
-              <option value="AUTO">自動（現在: {health.auto}）</option>
+              <option value="AUTO">自動（現在: {HEALTH_LABEL[health.auto]}）</option>
               <option value="GOOD">手動: 順調</option>
               <option value="WATCH">手動: 注意</option>
               <option value="RISK">手動: 危険</option>

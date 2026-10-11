@@ -94,7 +94,7 @@ export function WorkloadDrawer({ matrix, forecast, userId, weekIndex, onClose }:
         <div className="wd-summary__main">
           <span className="wd-summary__pct">{pct}%</span>
           <span className={cx('wd-summary__level', `wd-summary__level--${level}`)}>{LEVEL_LABEL[level]}</span>
-          <small className="wd-summary__mode">{forecast ? '見込み込み' : '確定のみ'}</small>
+          <small className="wd-summary__mode">{forecast ? '受注見込みを含む' : '確定のみ'}</small>
         </div>
         <dl className="wd-kv">
           <div>
@@ -102,8 +102,8 @@ export function WorkloadDrawer({ matrix, forecast, userId, weekIndex, onClose }:
             <dd>{fmtNum(cell.planned)}h <small>{Math.round(cell.utilization * 100)}%</small></dd>
           </div>
           <div>
-            <dt>見込み（確度加重）</dt>
-            <dd>{fmtNum(cell.expected)}h <small>見込み込み {Math.round(cell.forecastUtilization * 100)}%</small></dd>
+            <dt>受注見込み分（確度加重）</dt>
+            <dd>{fmtNum(cell.expected)}h <small>含めると {Math.round(cell.forecastUtilization * 100)}%</small></dd>
           </div>
           <div>
             <dt>稼働可能</dt>
@@ -182,12 +182,12 @@ export function WorkloadDrawer({ matrix, forecast, userId, weekIndex, onClose }:
       {loads.length > 0 && (
         <section>
           <h3 className="section-title">
-            配置・見込みの内訳 <span>{loads.length}件</span>
+            配置・受注見込みの内訳 <span>{loads.length}件</span>
           </h3>
           <ul className="wd-loads">
             {loads.map((l, i) => (
               <li key={i}>
-                <span className={cx('chip', l.kind === 'expected' && 'chip--soft')}>{l.kind === 'committed' ? '確定' : '見込み'}</span>
+                <span className={cx('chip', l.kind === 'expected' && 'chip--soft')}>{l.kind === 'committed' ? '確定' : '受注見込み'}</span>
                 <span className="wd-loads__name">
                   {targetName(l)}
                   <small>{l.role}</small>

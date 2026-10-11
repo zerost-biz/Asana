@@ -441,22 +441,36 @@ function AuditTab() {
 }
 
 /* ---------------- データ ---------------- */
+
+/** 単一HTML版（プレビュー等）はファイルのダウンロードが使えないので、クリップボードへコピーする */
+const CLIPBOARD_ONLY = import.meta.env.VITE_ROUTER === 'memory'
+
+async function copyJson(json: string): Promise<string> {
+  await navigator.clipboard.writeText(json)
+  return 'データ（JSON）をクリップボードにコピーしました'
+}
+
+async function downloadJson(json: string, seededOn: string): Promise<string> {
+  const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }))
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `project-delivery-os-${seededOn}.json`
+  a.click()
+  URL.revokeObjectURL(url)
+  return 'データをJSONで書き出しました'
+}
+
+const saveJson = CLIPBOARD_ONLY ? (json: string) => copyJson(json) : downloadJson
+
 function DataTab() {
   const { data, actions } = useApp()
   const { toast } = useToast()
   const [confirm, setConfirm] = useState(false)
-  const exportJson = () => {
+  const exportJson = async () => {
     try {
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `project-delivery-os-${data.seededOn}.json`
-      a.click()
-      URL.revokeObjectURL(url)
-      toast('データをJSONで書き出しました')
+      toast(await saveJson(JSON.stringify(data, null, 2), data.seededOn))
     } catch {
-      toast('この表示環境では書き出しできません', 'info')
+      toast('この表示環境では書き出し・コピーができません', 'info')
     }
   }
   const counts: [string, number][] = [
@@ -483,7 +497,7 @@ function DataTab() {
         </dl>
         <div className="decide" style={{ marginTop: 16 }}>
           <button type="button" className="btn btn--ghost" onClick={exportJson}>
-            <Download size={15} /> JSONで書き出す
+            <Download size={15} /> {CLIPBOARD_ONLY ? 'JSONをコピー' : 'JSONで書き出す'}
           </button>
           <button type="button" className="btn btn--ghost" onClick={() => setConfirm(true)}>
             <RotateCcw size={15} /> デモデータに初期化

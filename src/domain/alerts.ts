@@ -92,7 +92,7 @@ export function buildAlerts(input: AlertInput): Alert[] {
           id: `forecast:${u.id}:${w.index}`,
           kind: 'forecast_overload',
           tone: 'attention',
-          title: `${u.name} ${w.label} 見込み込み${Math.round(c.forecastUtilization * 100)}%`,
+          title: `${u.name} ${w.label} 受注見込み込み${Math.round(c.forecastUtilization * 100)}%`,
           detail: `${w.range} · 受注見込みの案件を含めると稼働を超えます（確定 ${Math.round(c.utilization * 100)}%）`,
           to: `/workload?cell=${u.id}:${w.index}`,
           decision: false,

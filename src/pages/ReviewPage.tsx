@@ -156,7 +156,7 @@ export function ReviewPage() {
             </div>
           </Card>
 
-          <Card title="稼働の見通し（今週〜+3週）" subtitle="見込み込みにすると、受注見込みの案件も含めた将来の負荷が見えます" action={<Link className="link-btn" to="/workload">稼働状況を開く</Link>}>
+          <Card title="稼働の見通し（今週〜+3週）" subtitle="「受注見込みを含む」にすると、受注前の案件も含めた将来の負荷が見えます" action={<Link className="link-btn" to="/workload">稼働状況を開く</Link>}>
             <WorkloadOutlook />
           </Card>
         </div>

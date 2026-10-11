@@ -9,7 +9,7 @@ import { cx } from './cx'
 
 interface Props {
   matrix: WorkloadMatrix
-  /** true: 受注見込み・仮配置（確度加重）を含めた「見込み込み」の負荷率で色分けする */
+  /** true: 受注見込み・仮配置（確度加重）を含めた「受注見込みを含む」負荷率で色分けする */
   forecast: boolean
   /** "userId:weekIndex" */
   selectedKey: string | null
@@ -124,7 +124,7 @@ export function WorkloadGrid({ matrix, forecast, selectedKey, onSelect, projectI
         <div className="wl__row wl__row--total" role="row">
           <div role="rowheader" className="wl__person wl__person--total">
             チーム合計
-            <small>{forecast ? '確定 ＋ 見込み' : '確定のみ'}</small>
+            <small>{forecast ? '確定 ＋ 受注見込み分' : '確定のみ'}</small>
           </div>
           {totals.map((t, i) => (
             <div key={i} role="cell" className="wl__total">
@@ -197,7 +197,7 @@ function LoadCell({
       className={cx('wl__cell', `wl__cell--${level}`, selected && 'is-selected')}
       onClick={onClick}
       aria-label={`${userName} ${weekLabel} 負荷${pct}% ${LEVEL_LABEL[level]}`}
-      title={`${userName} ${weekLabel}\n確定 ${fmtNum(cell.planned)}h${cell.expected > 0 ? ` / 見込み ${fmtNum(cell.expected)}h（確度加重）` : ''}\n稼働可能 ${fmtNum(cell.capacity)}h（標準 ${fmtNum(cell.base)}h − 休暇等 ${fmtNum(cell.unavailable)}h）`}
+      title={`${userName} ${weekLabel}\n確定 ${fmtNum(cell.planned)}h${cell.expected > 0 ? ` / 受注見込み分 ${fmtNum(cell.expected)}h（確度加重）` : ''}\n稼働可能 ${fmtNum(cell.capacity)}h（標準 ${fmtNum(cell.base)}h − 休暇等 ${fmtNum(cell.unavailable)}h）`}
     >
       <span className="wl__pct">
         {pct}%

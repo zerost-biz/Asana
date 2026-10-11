@@ -432,7 +432,15 @@ export function reducer(state: AppData, action: Action): AppData {
         }
         userSkills = [...userSkills.filter((u) => !(u.userId === e.userId && u.skillId === sid)), row]
       }
-      const s = { ...state, userSkills, experiences: state.experiences.map((x) => (x.id === action.id ? { ...x, status: 'confirmed' as const } : x)) }
+      let s: AppData = { ...state, userSkills, experiences: state.experiences.map((x) => (x.id === action.id ? { ...x, status: 'confirmed' as const } : x)) }
+      // スキルのレベルが変わったものは、スキルの変更履歴にも残す
+      for (const sid of e.skillIds) {
+        const was = state.userSkills.find((u) => u.userId === e.userId && u.skillId === sid)?.level ?? 0
+        const now = userSkills.find((u) => u.userId === e.userId && u.skillId === sid)?.level ?? 0
+        if (was === now) continue
+        const skillName = state.skills.find((k) => k.id === sid)?.name ?? sid
+        s = addLog(s, meta, { entityType: 'user_skill', entityId: `${e.userId}:${sid}`, action: 'update', summary: `${nameOf(e.userId)}の「${skillName}」レベル ${was} → ${now}（経験の確定）`, before: { level: was }, after: { level: now } })
+      }
       return addLog(s, meta, { entityType: 'experience', entityId: action.id, projectId: e.projectId, action: 'update', summary: `${nameOf(e.userId)}の経験「${prj?.name ?? ''}（${e.role}）」を確定${action.levelUp.length > 0 ? `（スキル${action.levelUp.length}件のレベルを更新）` : ''}` })
     }
 

@@ -67,7 +67,7 @@ export function WorkloadPanel({ projectId, editableCapacity }: { projectId?: str
               onClick={() => setMode('forecast')}
               title="受注見込みの案件・仮配置（確度で重み付け）も含めた先行的な負荷率を出します"
             >
-              見込み込み
+              受注見込みを含む
             </button>
           </div>
           <div className="unit-toggle" role="radiogroup" aria-label="表示する週数">
@@ -83,7 +83,7 @@ export function WorkloadPanel({ projectId, editableCapacity }: { projectId?: str
           <span className="wlpanel__note">このプロジェクトに担当タスクを持つメンバーの、全プロジェクト合算の負荷です</span>
         ) : (
           <span className="wlpanel__note">
-            負荷率 = {forecast ? '（確定 ＋ 見込み）' : '確定'} ÷ 稼働可能（標準稼働 − 休暇・研修など）。見込み = 受注見込み案件の工数 × 確度
+            負荷率 = {forecast ? '（確定 ＋ 受注見込み分）' : '確定'} ÷ 稼働可能（標準稼働 − 休暇・研修など）。受注見込み分 = 受注見込み案件の工数 × 確度
           </span>
         )}
       </div>

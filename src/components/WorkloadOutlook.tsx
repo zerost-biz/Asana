@@ -30,7 +30,7 @@ export function WorkloadOutlook() {
             onClick={() => setMode('forecast')}
             title="受注見込みの案件・仮配置（確度で重み付け）も含めます"
           >
-            見込み込み
+            受注見込みを含む
           </button>
         </div>
       </div>
@@ -57,7 +57,7 @@ export function WorkloadOutlook() {
                 type="button"
                 className={cx('wo__pill', `wo__pill--${level}`)}
                 onClick={() => navigate(`/workload?cell=${u.id}:${c.weekIndex}`)}
-                title={`${u.name} ${workload.weeks[c.weekIndex].label}: 確定 ${fmtNum(c.planned)}h${forecast ? ` + 見込み ${fmtNum(c.expected)}h` : ''} / 稼働可能 ${fmtNum(c.capacity)}h`}
+                title={`${u.name} ${workload.weeks[c.weekIndex].label}: 確定 ${fmtNum(c.planned)}h${forecast ? ` + 受注見込み分 ${fmtNum(c.expected)}h` : ''} / 稼働可能 ${fmtNum(c.capacity)}h`}
               >
                 {level === 'warn' && <TriangleAlert size={13} strokeWidth={2.6} />}
                 {Math.round(cellRatio(c, forecast) * 100)}%

@@ -1,8 +1,8 @@
 {
   "name": "project-delivery-os",
   "private": true,
-  "version": "0.1.0",
-  "description": "Project Delivery OS - WBS / 工数 / Workload / Dashboard UIプロトタイプ",
+  "version": "1.0.0",
+  "description": "Project Delivery OS - PJ・WBS・工数・リソース・アサイン・タレント統合管理（ローカルUIプロトタイプ）",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "typecheck": "tsc -b",
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "e2e": "node e2e/p0.mjs && node e2e/p1.mjs"
   },
   "dependencies": {
     "date-fns": "^4.4.0",

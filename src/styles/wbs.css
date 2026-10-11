@@ -297,11 +297,11 @@ button.chev:hover {
 /* 幅が狭いとき（ドロワー表示中など）は 担当・開始・終了 を畳んで、工数列を優先して見せる */
 @container wbs (max-width: 880px) {
   .wbs__table {
-    min-width: 600px;
+    min-width: 760px;
   }
 
   .wbs__row {
-    grid-template-columns: minmax(120px, 1fr) 46px 46px 46px 50px 68px 86px 78px 32px;
+    grid-template-columns: minmax(240px, 1fr) 46px 46px 46px 50px 68px 86px 78px 32px;
     padding: 0 10px;
   }
 
