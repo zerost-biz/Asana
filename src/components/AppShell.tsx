@@ -21,7 +21,7 @@ export function AppShell() {
             {volatile && (
               <div className="banner" role="status">
                 <Info size={15} />
-                この表示環境ではブラウザ保存（localStorage）が使えないため、入力内容はこのページを閉じるまでの一時的なものです。保存して使うには <code>npm run dev</code> で起動してください。
+                この表示環境ではブラウザへの保存ができないため、入力内容はこのページを閉じるまでの一時的なものです。保存して使うには <code>npm run dev</code> で起動してください。
               </div>
             )}
             <Outlet />

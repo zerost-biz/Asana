@@ -666,3 +666,95 @@
 .members--cost .num {
   font-variant-numeric: tabular-nums;
 }
+
+/* ---------- 用語の説明 ---------- */
+.glossary-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.glossary-btn:hover {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.sidebar__foot {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sidebar__foot .glossary-btn {
+  align-self: flex-start;
+}
+
+.glossary {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-height: 52vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.glossary h4 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--accent-strong);
+}
+
+.glossary dl {
+  margin: 0;
+}
+
+.glossary dl > div {
+  display: grid;
+  grid-template-columns: 138px 1fr;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.glossary dt {
+  display: flex;
+  flex-direction: column;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.glossary dt small {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-3);
+  letter-spacing: 0.04em;
+}
+
+.glossary dd {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-2);
+}
+
+.card__head > div:first-child {
+  min-width: 0;
+}
+
+.card__actions {
+  flex: none;
+  white-space: nowrap;
+}
+
+.link-btn {
+  white-space: nowrap;
+}

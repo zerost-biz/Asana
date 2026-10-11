@@ -57,7 +57,7 @@ export function WorkloadDrawer({ matrix, userId, weekIndex, onClose }: Props) {
   return (
     <Drawer
       onClose={onClose}
-      ariaLabel="Workload内訳"
+      ariaLabel="稼働の内訳"
       eyebrow={`${week.label}  ·  ${week.range}`}
       title={
         <span className="wd-title">
@@ -72,7 +72,7 @@ export function WorkloadDrawer({ matrix, userId, weekIndex, onClose }: Props) {
           <span className={cx('wd-summary__level', `wd-summary__level--${cell.level}`)}>{LEVEL_LABEL[cell.level]}</span>
         </div>
         <div className="wd-summary__hours">
-          Planned <b>{fmtNum(cell.planned)}h</b> / Available <b>{fmtNum(cell.capacity)}h</b>
+          予定 <b>{fmtNum(cell.planned)}h</b> / 稼働可能 <b>{fmtNum(cell.capacity)}h</b>
           {cell.level === 'warn' && <em>（{fmtSignedH(over)} 超過）</em>}
         </div>
         <ProgressBar value={cell.utilization * 100} max={100} tone={cell.level === 'warn' ? 'risk' : cell.level === 'caution' ? 'watch' : 'accent'} size="lg" />
@@ -110,13 +110,13 @@ export function WorkloadDrawer({ matrix, userId, weekIndex, onClose }: Props) {
           )
         })}
         <p className="hint">
-          算出ルール: 未完了タスクの ETC を、max(開始日, 今週月曜)〜終了日の稼働日へ均等配分。終了日を過ぎたタスクの ETC は今週に計上されます。
+          計算のしかた: 未完了タスクの「残り時間」を、開始日（開始が過去なら今週の月曜）から終了日までの平日に均等に割り振っています。終了日を過ぎたタスクの残り時間は、すべて今週に入ります。
         </p>
       </section>
 
       {cell.level !== 'normal' && spare.length > 0 && (
         <section>
-          <h3 className="section-title">同じ週の空き（再配分の候補）</h3>
+          <h3 className="section-title">同じ週の空き（担当を移す候補）</h3>
           <ul className="wd-spare">
             {spare.map((s) => (
               <li key={s.user.id}>

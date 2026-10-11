@@ -78,14 +78,14 @@ const PROJECTS: ProjectDef[] = [
         tasks: [
           { title: 'ヒアリング', owner: H, s: -14, e: -10, plan: 20, act: 20, etc: 0, prog: 100, status: DONE },
           { title: '現場調査', owner: K, s: -12, e: -4, plan: 24, act: 28, etc: 0, prog: 100, status: DONE, comment: '工場見学が想定より長引いた（+4h）' },
-          { title: 'As-Is整理', owner: H, s: -5, e: 9, plan: 36, act: 24, etc: 16, prog: 70, status: WIP, comment: '現場調査の追加メモを反映中。主サンプル（PLAN36 / ACT24 / ETC16 → EAC40）' },
+          { title: 'As-Is整理', owner: H, s: -5, e: 9, plan: 36, act: 24, etc: 16, prog: 70, status: WIP, comment: '現場調査の追加メモを反映中。主サンプル（計画36 / 実績24 / 残り16 → 見込み40）' },
         ],
       },
       {
         title: 'To-Be設計',
         tasks: [
           { title: '課題整理', owner: H, s: -3, e: 7, plan: 20, act: 12, etc: 8, prog: 60, status: WIP },
-          { title: 'MES構想', owner: K, s: -3, e: 18, plan: 60, act: 20, etc: 48, prog: 30, status: WIP, comment: '構想の論点が増えており、ETCを上方修正済み' },
+          { title: 'MES構想', owner: K, s: -3, e: 18, plan: 60, act: 20, etc: 48, prog: 30, status: WIP, comment: '構想の論点が増えており、残り時間を上方修正済み' },
           { title: 'システム構成', owner: U, s: -3, e: 21, plan: 60, act: 10, etc: 40, prog: 20, status: WIP },
           { title: 'データ連携設計', owner: H, s: 7, e: 18, plan: 18, act: 0, etc: 32, prog: 0, status: TODO },
         ],
@@ -310,6 +310,6 @@ export function createSeed(today: Date): AppData {
 export const RECENT_WINS: { title: string; note: string; daysAgo: number }[] = [
   { title: 'A社 PoC受注', note: 'SaaS導入のPoCから本契約へ。来週キックオフ', daysAgo: 1 },
   { title: 'MES構想ヒアリング完了', note: 'B社 現状分析フェーズのヒアリングを全件完了', daysAgo: 3 },
-  { title: 'WBSテンプレート完成', note: '現状分析〜ロードマップの標準WBSを整備', daysAgo: 5 },
+  { title: '作業テンプレート完成', note: '現状分析〜ロードマップの標準の作業項目を整備', daysAgo: 5 },
   { title: '新商材LP のワイヤー確定', note: 'GTM 営業資料の骨子も合意', daysAgo: 8 },
 ]

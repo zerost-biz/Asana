@@ -33,7 +33,7 @@ export function DashboardPage() {
   return (
     <div className="page">
       <PageHeader
-        title="Team Delivery Dashboard"
+        title="チームのダッシュボード"
         sub={`${fmtFull(today)}  ·  今週は ${workload.weeks[0].range}`}
       />
 
@@ -51,11 +51,11 @@ export function DashboardPage() {
 
       <div className="kpi-grid">
         <KpiCard
-          label="進行PJ数"
+          label="進行中のプロジェクト"
           icon={Layers}
           value={active.length}
           unit="件"
-          sub={`GOOD ${count('GOOD')} · WATCH ${count('WATCH')} · RISK ${count('RISK')}`}
+          sub={`順調 ${count('GOOD')} · 注意 ${count('WATCH')} · 危険 ${count('RISK')}`}
           to="/projects"
         />
         <KpiCard
@@ -67,7 +67,7 @@ export function DashboardPage() {
           to="/workload"
         />
         <KpiCard
-          label="Overload人数"
+          label="過負荷の人数"
           icon={Users}
           value={overloadUsers.length}
           unit="人"
@@ -89,8 +89,8 @@ export function DashboardPage() {
       <div className="dash">
         <div className="dash__main">
           <Card
-            title="Project Health"
-            subtitle="進捗・工数消化・EAC差異から自動判定。行をクリックでプロジェクトへ"
+            title="プロジェクトの状態"
+            subtitle="進捗・工数消化・見込み差異から自動で判定。行をクリックでプロジェクトへ"
             action={
               <div className="card__actions">
                 <button type="button" className="link-btn" onClick={openCreate}>
@@ -107,9 +107,9 @@ export function DashboardPage() {
           </Card>
 
           <Card
-            title="Workload Outlook"
-            subtitle="Planned ÷ Available（週40h）。セルをクリックで内訳を表示"
-            action={<Link to="/workload" className="link-btn">Workloadを開く</Link>}
+            title="稼働の見通し"
+            subtitle="予定時間 ÷ 稼働可能時間（週40時間）。セルをクリックで内訳を表示"
+            action={<Link to="/workload" className="link-btn">稼働状況を開く</Link>}
           >
             <WorkloadOutlook />
           </Card>
@@ -118,14 +118,14 @@ export function DashboardPage() {
         <div className="dash__side">
           <Card
             id="decision"
-            title="Decision Required"
-            subtitle="過負荷・EAC超過・遅延・Blocked・リスクから自動抽出"
+            title="要判断"
+            subtitle="過負荷・時間超過・粗利・遅延・停止中・リスクから自動で抽出"
             action={decisions.length > 0 ? <span className="count-pill">{decisions.length}</span> : undefined}
           >
             <DecisionList />
           </Card>
 
-          <Card title="Recent Wins" subtitle="（ダミーデータ）">
+          <Card title="最近の成果" subtitle="（ダミーデータ）">
             <RecentWins />
           </Card>
         </div>
@@ -142,7 +142,7 @@ export function DashboardPage() {
             toast('デモデータを初期化しました', 'info')
           }}
         >
-          WBS・工数入力（TimeEntry）・ETC・進捗・日付など、これまでの変更はすべて破棄され、今週を基準にしたサンプルデータへ戻ります。
+          作業項目・作業時間の記録・残り・進捗・日付など、これまでの変更はすべて破棄され、今週を基準にしたサンプルデータへ戻ります。
         </ConfirmDialog>
       )}
     </div>

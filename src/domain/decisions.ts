@@ -78,8 +78,8 @@ export function buildDecisions(
         id: `eac:${p.project.id}`,
         kind: 'eac',
         tone: p.health.varianceRatio >= 0.15 ? 'critical' : 'attention',
-        title: `${name} EAC ${fmtSignedH(p.variance)}`,
-        detail: `PLANを${Math.round(p.health.varianceRatio * 100)}%超過する見込み。スコープ/体制の見直しを判断`,
+        title: `${name} 時間超過 ${fmtSignedH(p.variance)}`,
+        detail: `計画を${Math.round(p.health.varianceRatio * 100)}%超える見込み。作業範囲・体制の見直しを判断`,
         to: `/projects/${p.project.id}`,
       })
     }
@@ -90,7 +90,7 @@ export function buildDecisions(
         kind: 'margin',
         tone: c.marginRate < 0 ? 'critical' : 'attention',
         title: `${name} 粗利率 ${Math.round(c.marginRate * 100)}%`,
-        detail: `受注 ${fmtYen(c.budget)} − EAC原価 ${fmtYen(c.eacCost)} ＝ 粗利 ${fmtSignedYen(c.margin)}（目安 ${Math.round(MARGIN_TARGET * 100)}%）`,
+        detail: `受注 ${fmtYen(c.budget)} − 見込みの人件費 ${fmtYen(c.eacCost)} ＝ 粗利 ${fmtSignedYen(c.margin)}（目安 ${Math.round(MARGIN_TARGET * 100)}%）`,
         to: `/projects/${p.project.id}/dashboard`,
       })
     }
@@ -110,7 +110,7 @@ export function buildDecisions(
         id: `blocked:${p.project.id}`,
         kind: 'blocked',
         tone: 'attention',
-        title: `${name} Blockedタスク ${p.blocked.length}件`,
+        title: `${name} 停止中のタスク ${p.blocked.length}件`,
         detail: p.blocked.map((b) => b.title).join(' / '),
         to: `/projects/${p.project.id}?task=${p.blocked[0].id}`,
       })

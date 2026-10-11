@@ -98,6 +98,6 @@ export const PROJECT_STATUS_LABEL: Record<ProjectStatus, string> = {
 export const WBS_STATUS_LABEL: Record<WbsStatus, string> = {
   'Not started': '未着手',
   'In progress': '進行中',
-  Blocked: 'Blocked',
+  Blocked: '停止中',
   Done: '完了',
 }

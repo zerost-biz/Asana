@@ -10,13 +10,13 @@ import { cx } from './cx'
 export function ProjectHealthTable() {
   const { derived } = useApp()
   return (
-    <div className="ph" role="table" aria-label="プロジェクトのHealth">
+    <div className="ph" role="table" aria-label="プロジェクトの状態">
       <div className="ph__row ph__row--head" role="row">
         <div role="columnheader">プロジェクト</div>
         <div role="columnheader">進捗率</div>
         <div role="columnheader">工数消化率</div>
-        <div role="columnheader">EAC差異</div>
-        <div role="columnheader">Health</div>
+        <div role="columnheader">見込み差異</div>
+        <div role="columnheader">状態</div>
         <div />
       </div>
       {derived.summaries.map((s) => {
@@ -44,9 +44,9 @@ export function ProjectHealthTable() {
             </div>
             <div role="cell" className={cx('ph__var', over && 'is-over')}>
               <b>{fmtSignedH(totals.variance)}</b>
-              <span className="ph__small">EAC {fmtNum(totals.eac)}h</span>
+              <span className="ph__small">見込み {fmtNum(totals.eac)}h</span>
               <span className={cx('ph__small', s.cost.marginRate !== null && s.cost.marginRate < 0.1 && 'ph__small--warn')}>
-                {s.cost.marginRate !== null ? `粗利 ${Math.round(s.cost.marginRate * 100)}%` : `原価 ${fmtYenShort(totals.eacCost)}`}
+                {s.cost.marginRate !== null ? `粗利 ${Math.round(s.cost.marginRate * 100)}%` : `人件費 ${fmtYenShort(totals.eacCost)}`}
               </span>
             </div>
             <div role="cell">

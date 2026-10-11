@@ -48,7 +48,7 @@ export function MyWorkPage() {
   return (
     <div className="page page--mywork">
       <PageHeader
-        title="My Work"
+        title="自分の作業"
         sub={`${fmtFull(today)}  ·  ${me.name}が担当する未完了タスク ${mine.filter((l) => l.status !== 'Done').length}件`}
         right={
           <div className="usersw" role="radiogroup" aria-label="ユーザー切替">
@@ -104,7 +104,7 @@ export function MyWorkPage() {
       )}
 
       {todayEntries.length > 0 && (
-        <Card title="今日の入力履歴" subtitle="誤入力は × で取り消せます（ACT も戻ります）" className="mywork__log">
+        <Card title="今日の入力履歴" subtitle="誤入力は × で取り消せます（実績も元に戻ります）" className="mywork__log">
           <ul className="log">
             {todayEntries.map((e) => (
               <li key={e.id}>
@@ -137,7 +137,7 @@ export function MyWorkPage() {
           <ProgressBar value={(weekHours / me.weeklyCapacity) * 100} size="sm" />
         </div>
         <div className="sum">
-          <span>今週の予定（ETC配分）</span>
+          <span>今週の予定（残り時間の配分）</span>
           <b>{fmtNum(weekPlanned)}<i>h</i></b>
           <small>負荷 {Math.round((weekPlanned / me.weeklyCapacity) * 100)}%</small>
         </div>

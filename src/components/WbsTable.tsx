@@ -8,6 +8,7 @@ import type { User, WbsItem } from '../domain/types'
 import { usePref } from '../hooks/usePref'
 import { useApp } from '../store/AppContext'
 import { Avatar, AvatarStack } from './Avatar'
+import { GlossaryButton } from './GlossaryDialog'
 import { ProgressBar } from './ProgressBar'
 import { WbsStatusBadge } from './StatusBadge'
 import { cx } from './cx'
@@ -29,7 +30,7 @@ function VarianceCell({ value, text }: { value: number; text: string }) {
   const r = Math.round(value * 10) / 10
   if (r > 0)
     return (
-      <span className="var var--over" title="EAC が PLAN を超過する見込み">
+      <span className="var var--over" title="見込みが計画を超えています">
         <TriangleAlert size={12} strokeWidth={2.4} />
         {text}
       </span>
@@ -127,7 +128,7 @@ export function WbsTable({ projectId, selectedId, onOpen, onAdd }: Props) {
   }
 
   return (
-    <section className="wbs" aria-label="WBS一覧">
+    <section className="wbs" aria-label="作業一覧">
       <div className="wbs__toolbar">
         <div className="wbs__toolbar-left">
           <button type="button" className="btn btn--primary" onClick={() => onAdd(null)}>
@@ -143,9 +144,10 @@ export function WbsTable({ projectId, selectedId, onOpen, onAdd }: Props) {
           </button>
         </div>
         <div className="wbs__toolbar-right">
+          <GlossaryButton />
           <div className="unit-toggle" role="radiogroup" aria-label="表示単位">
             <button type="button" role="radio" aria-checked={unit === 'h'} className={cx(unit === 'h' && 'is-on')} onClick={() => setUnit('h')}>
-              工数 (h)
+              時間
             </button>
             <button
               type="button"
@@ -153,9 +155,9 @@ export function WbsTable({ projectId, selectedId, onOpen, onAdd }: Props) {
               aria-checked={unit === 'yen'}
               className={cx(unit === 'yen' && 'is-on')}
               onClick={() => setUnit('yen')}
-              title="工数 × 単価の人件費（万円表記）"
+              title="作業時間 × 単価の人件費（万円表記）"
             >
-              コスト (円)
+              金額（円）
             </button>
           </div>
           <label className="wbs__filter">
@@ -175,15 +177,15 @@ export function WbsTable({ projectId, selectedId, onOpen, onAdd }: Props) {
       <div className="wbs__scroll">
         <div className="wbs__table" role="table">
           <div className="wbs__row wbs__row--head" role="row">
-            <div role="columnheader">WBS</div>
+            <div role="columnheader">作業項目</div>
             <div role="columnheader">担当</div>
             <div role="columnheader">開始</div>
             <div role="columnheader">終了</div>
-            <div role="columnheader" className="num" title="計画工数">PLAN</div>
-            <div role="columnheader" className="num" title="実績工数（TimeEntry合計）">ACT</div>
-            <div role="columnheader" className="num" title="残工数（入力値）">ETC</div>
-            <div role="columnheader" className="num" title="ACT + ETC">EAC</div>
-            <div role="columnheader" className="num" title="EAC − PLAN">差異</div>
+            <div role="columnheader" className="num" title="計画: 最初に見積もった作業時間">計画</div>
+            <div role="columnheader" className="num" title="実績: これまでに記録された作業時間の合計">実績</div>
+            <div role="columnheader" className="num" title="残り: 完了まで、あと何時間かかるか（担当者が入力）">残り</div>
+            <div role="columnheader" className="num" title="見込み: 実績 + 残り（完了までの合計時間）">見込み</div>
+            <div role="columnheader" className="num" title="差異: 見込み − 計画（＋は計画より時間がかかる）">差異</div>
             <div role="columnheader">進捗</div>
             <div role="columnheader">状態</div>
           </div>
@@ -238,7 +240,7 @@ export function WbsTable({ projectId, selectedId, onOpen, onAdd }: Props) {
                   <span className="wbs__code">{numbers.get(item.id)}</span>
                   <span className="wbs__title">{item.title}</span>
                   {!isParent && item.status === 'Blocked' && (
-                    <span className="chip chip--warn" title="Blocked">
+                    <span className="chip chip--warn" title="停止中">
                       <Lock size={11} strokeWidth={2.4} />
                     </span>
                   )}
@@ -248,9 +250,9 @@ export function WbsTable({ projectId, selectedId, onOpen, onAdd }: Props) {
                     </span>
                   )}
                   {isParent && w && (w.overdue > 0 || w.blocked > 0) && (
-                    <span className="chip chip--warn" title="配下に遅延 / Blocked のタスクがあります">
+                    <span className="chip chip--warn" title="配下に遅延・停止中のタスクがあります">
                       <TriangleAlert size={11} strokeWidth={2.4} />
-                      {[w.overdue > 0 && `遅延${w.overdue}`, w.blocked > 0 && `Blocked${w.blocked}`].filter(Boolean).join(' ')}
+                      {[w.overdue > 0 && `遅延${w.overdue}`, w.blocked > 0 && `停止${w.blocked}`].filter(Boolean).join(' ')}
                     </span>
                   )}
                   {isParent && (

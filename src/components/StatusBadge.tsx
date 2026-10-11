@@ -1,5 +1,6 @@
 import { Lock } from 'lucide-react'
 import type { Health, WbsStatus } from '../domain/types'
+import { HEALTH_LABEL } from '../domain/calculations'
 import { WBS_STATUS_LABEL } from '../domain/types'
 import { cx } from './cx'
 
@@ -7,7 +8,7 @@ export function HealthBadge({ health, size = 'md', title }: { health: Health; si
   return (
     <span className={cx('badge', 'badge--health', `badge--${health.toLowerCase()}`, size === 'sm' && 'badge--sm')} title={title}>
       <span className="badge__dot" />
-      {health}
+      {HEALTH_LABEL[health]}
     </span>
   )
 }

@@ -31,9 +31,9 @@ export function ProjectDashboard({ projectId }: { projectId: string }) {
     .map((item) => {
       const m = metrics.get(item.id) as Metrics
       const why: string[] = []
-      if (item.status === 'Blocked') why.push('Blocked')
+      if (item.status === 'Blocked') why.push('停止中')
       if (isOverdue(item.status, item.endDate, todayISO)) why.push(`遅延 ${daysBetween(item.endDate, todayISO)}日`)
-      if (item.status !== 'Done' && m.variance >= 4) why.push(`EAC ${fmtSignedH(m.variance)}`)
+      if (item.status !== 'Done' && m.variance >= 4) why.push(`見込み ${fmtSignedH(m.variance)}`)
       return { item, m, why }
     })
     .filter((x) => x.why.length > 0)
@@ -74,22 +74,22 @@ export function ProjectDashboard({ projectId }: { projectId: string }) {
   return (
     <div className="pdash">
       <div className="kpi-grid kpi-grid--5">
-        <KpiCard label="PLAN（計画）" value={fmtNum(totals.plan)} unit="h" sub="計画工数の合計" />
-        <KpiCard label="ACT（実績）" value={fmtNum(totals.act)} unit="h" sub={`消化率 ${fmtPct(totals.burn)}`} />
-        <KpiCard label="ETC（残工数）" value={fmtNum(totals.etc)} unit="h" sub="入力された残り見込み" />
-        <KpiCard label="EAC（完了時見込み）" value={fmtNum(totals.eac)} unit="h" sub="ACT + ETC" />
+        <KpiCard label="計画" value={fmtNum(totals.plan)} unit="h" sub="最初に見積もった時間の合計" />
+        <KpiCard label="実績" value={fmtNum(totals.act)} unit="h" sub={`消化率 ${fmtPct(totals.burn)}`} />
+        <KpiCard label="残り" value={fmtNum(totals.etc)} unit="h" sub="完了まで、あと何時間かかるか" />
+        <KpiCard label="見込み（完了時）" value={fmtNum(totals.eac)} unit="h" sub="実績 + 残り" />
         <KpiCard
-          label="差異（EAC − PLAN）"
+          label="差異（見込み − 計画）"
           value={fmtSignedH(totals.variance).replace('h', '')}
           unit="h"
           tone={totals.variance > 0 ? 'attention' : totals.variance < 0 ? 'good' : 'default'}
-          sub={totals.plan > 0 ? `PLANの ${totals.variance >= 0 ? '+' : ''}${Math.round((totals.variance / totals.plan) * 100)}%` : undefined}
+          sub={totals.plan > 0 ? `計画の ${totals.variance >= 0 ? '+' : ''}${Math.round((totals.variance / totals.plan) * 100)}%` : undefined}
         />
       </div>
 
       <Card
         title="人件費（原価）と粗利"
-        subtitle="工数 × 原価単価。実績は入力した人の単価、残工数・計画は担当者の単価で計算（単価は 設定 → メンバーと単価）"
+        subtitle="作業時間 × 時間単価。実績は入力した人の単価、残りと計画は担当者の単価で計算（単価は 設定 → メンバーと単価）"
         action={
           <button type="button" className="link-btn" onClick={() => openEdit(projectId)}>
             {cost.budget === null ? '受注額を設定' : '受注額を変更'}
@@ -104,24 +104,24 @@ export function ProjectDashboard({ projectId }: { projectId: string }) {
             <small>{cost.budget === null ? '設定すると粗利を計算します' : '契約・予算'}</small>
           </div>
           <div className="ctile">
-            <span>PLAN 原価</span>
+            <span>計画の人件費</span>
             <b>{fmtYen(totals.planCost)}</b>
             <small>{fmtNum(totals.plan)}h ＝ {fmtDays(totals.plan)}</small>
           </div>
           <div className="ctile">
-            <span>ACT 原価（実績）</span>
+            <span>実績の人件費</span>
             <b>{fmtYen(totals.actCost)}</b>
             <small>{fmtNum(totals.act)}h ＝ {fmtDays(totals.act)}</small>
           </div>
           <div className="ctile ctile--strong">
-            <span>EAC 原価（見込み）</span>
+            <span>見込みの人件費</span>
             <b>{fmtYen(totals.eacCost)}</b>
             <small>{fmtNum(totals.eac)}h ＝ {fmtDays(totals.eac)}</small>
           </div>
           <div className={cx('ctile', totals.varianceCost > 0 && 'ctile--warn')}>
-            <span>原価差異（EAC − PLAN）</span>
+            <span>人件費の差異（見込み − 計画）</span>
             <b>{fmtSignedYen(totals.varianceCost)}</b>
-            <small>{totals.planCost > 0 ? `PLAN原価の ${totals.varianceCost >= 0 ? '+' : ''}${Math.round((totals.varianceCost / totals.planCost) * 100)}%` : ' '}</small>
+            <small>{totals.planCost > 0 ? `計画の人件費の ${totals.varianceCost >= 0 ? '+' : ''}${Math.round((totals.varianceCost / totals.planCost) * 100)}%` : ' '}</small>
           </div>
           <div className={cx('ctile', cost.marginRate !== null && cost.marginRate < 0.1 && 'ctile--warn')}>
             <span>見込み粗利</span>
@@ -129,7 +129,7 @@ export function ProjectDashboard({ projectId }: { projectId: string }) {
             <small>
               {cost.marginRate === null
                 ? '受注額が未設定'
-                : `粗利率 ${Math.round(cost.marginRate * 100)}%（計画時 ${Math.round(((cost.planMargin ?? 0) / (cost.budget ?? 1)) * 100)}%）`}
+                : `粗利率 ${Math.round(cost.marginRate * 100)}%（計画では ${Math.round(((cost.planMargin ?? 0) / (cost.budget ?? 1)) * 100)}%）`}
             </small>
           </div>
         </div>
@@ -150,13 +150,13 @@ export function ProjectDashboard({ projectId }: { projectId: string }) {
             {cost.budget !== null && (
               <span className="margin__budget" style={{ left: `${(cost.budget / costScale) * 100}%` }} title={`受注額 ${fmtYen(cost.budget)}`} />
             )}
-            <span className="margin__plan" style={{ left: `${(totals.planCost / costScale) * 100}%` }} title={`PLAN原価 ${fmtYen(totals.planCost)}`} />
+            <span className="margin__plan" style={{ left: `${(totals.planCost / costScale) * 100}%` }} title={`計画の人件費 ${fmtYen(totals.planCost)}`} />
           </div>
           <div className="margin__legend">
-            <span><i className="lg lg--act" />ACT原価 {fmtYenShort(totals.actCost)}</span>
-            <span><i className="lg lg--etc" />ETC原価 {fmtYenShort(totals.etcCost)}</span>
+            <span><i className="lg lg--act" />実績の人件費 {fmtYenShort(totals.actCost)}</span>
+            <span><i className="lg lg--etc" />残りの人件費 {fmtYenShort(totals.etcCost)}</span>
             {cost.margin !== null && cost.margin > 0 && <span><i className="lg lg--profit" />粗利 {fmtYenShort(cost.margin)}</span>}
-            <span><i className="lg lg--plan" />PLAN原価の位置</span>
+            <span><i className="lg lg--plan" />計画の人件費の位置</span>
             {cost.budget !== null && <span><i className="lg lg--budget" />受注額の位置</span>}
           </div>
         </div>
@@ -164,12 +164,12 @@ export function ProjectDashboard({ projectId }: { projectId: string }) {
         <div className="members members--cost" role="table" aria-label="メンバー別の人件費">
           <div className="members__row members__row--head" role="row">
             <span>メンバー</span>
-            <span className="num">単価（円/h）</span>
-            <span className="num">ACT（h）</span>
-            <span className="num">ACT原価</span>
-            <span className="num">ETC（h）</span>
-            <span className="num">ETC原価</span>
-            <span className="num">EAC原価</span>
+            <span className="num">時間単価（円）</span>
+            <span className="num">実績（h）</span>
+            <span className="num">実績の人件費</span>
+            <span className="num">残り（h）</span>
+            <span className="num">残りの人件費</span>
+            <span className="num">見込みの人件費</span>
           </div>
           {memberRows.map((r) => {
             const u = r.id ? derived.userById.get(r.id) : undefined
@@ -195,12 +195,12 @@ export function ProjectDashboard({ projectId }: { projectId: string }) {
         <Card title="進捗 と 工数消化" subtitle="進捗が工数消化を下回ると、手戻り・見積り不足のサイン">
           <div className="gap">
             <div className="gap__row">
-              <span>進捗（PLAN加重）</span>
+              <span>進捗（計画時間で加重）</span>
               <ProgressBar value={totals.progress} size="lg" tone="good" />
               <b>{Math.round(totals.progress)}%</b>
             </div>
             <div className="gap__row">
-              <span>工数消化（ACT / PLAN）</span>
+              <span>工数消化（実績 ÷ 計画）</span>
               <ProgressBar value={burnPct} size="lg" tone={gap < -5 ? 'watch' : 'accent'} />
               <b>{Math.round(burnPct)}%</b>
             </div>
@@ -209,14 +209,14 @@ export function ProjectDashboard({ projectId }: { projectId: string }) {
                 ? `進捗が工数消化を ${Math.round(gap)}pt 上回っています（順調）`
                 : gap > -5
                   ? '進捗と工数消化はほぼ一致しています'
-                  : `工数消化が進捗を ${Math.round(-gap)}pt 上回っています。ETCの再見積りを推奨`}
+                  : `工数消化が進捗を ${Math.round(-gap)}pt 上回っています。「残り」の見直しをおすすめします`}
             </p>
           </div>
         </Card>
 
         <Card
-          title="Health 判定"
-          subtitle="EAC差異・遅延・Blocked・未解決リスクから自動判定（手動で上書きも可）"
+          title="状態の判定"
+          subtitle="時間の超過・遅延・停止中・未解決のリスクから自動で判定します（手動で変更も可）"
           action={<HealthBadge health={health.health} />}
         >
           <ul className="reasons">
@@ -236,14 +236,14 @@ export function ProjectDashboard({ projectId }: { projectId: string }) {
               }}
             >
               <option value="AUTO">自動（現在: {health.auto}）</option>
-              <option value="GOOD">手動: GOOD</option>
-              <option value="WATCH">手動: WATCH</option>
-              <option value="RISK">手動: RISK</option>
+              <option value="GOOD">手動: 順調</option>
+              <option value="WATCH">手動: 注意</option>
+              <option value="RISK">手動: 危険</option>
             </select>
           </label>
         </Card>
 
-        <Card title="フェーズ別の工数" subtitle="■ ACT（実績） ■ ETC（残） ┃ PLAN（計画線）" className="pdash__wide">
+        <Card title="フェーズ別の工数" subtitle="■ 実績　■ 残り　┃ 計画の位置" className="pdash__wide">
           <div className="bullets">
             {phases.map(({ item, m }) => (
               <div key={item.id} className="bullets__row">
@@ -252,13 +252,13 @@ export function ProjectDashboard({ projectId }: { projectId: string }) {
                     {derived.numbers.get(item.id)} {item.title}
                   </strong>
                   <span>
-                    PLAN {fmtNum(m.plan)}h → EAC {fmtNum(m.eac)}h
+                    計画 {fmtNum(m.plan)}h → 見込み {fmtNum(m.eac)}h
                   </span>
                 </div>
                 <div className="bullets__bar">
                   <span className="bullets__act" style={{ width: `${(m.act / scaleMax) * 100}%` }} />
                   <span className="bullets__etc" style={{ left: `${(m.act / scaleMax) * 100}%`, width: `${(m.etc / scaleMax) * 100}%` }} />
-                  <span className="bullets__plan" style={{ left: `${(m.plan / scaleMax) * 100}%` }} title={`PLAN ${fmtNum(m.plan)}h`} />
+                  <span className="bullets__plan" style={{ left: `${(m.plan / scaleMax) * 100}%` }} title={`計画 ${fmtNum(m.plan)}h`} />
                 </div>
                 <b className={cx('bullets__var', m.variance > 0 && 'is-over')}>{fmtSignedH(m.variance)}</b>
                 <span className="bullets__pct">{Math.round(m.progress)}%</span>
@@ -267,7 +267,7 @@ export function ProjectDashboard({ projectId }: { projectId: string }) {
           </div>
         </Card>
 
-        <Card title="要注意タスク" subtitle="Blocked・遅延・EAC超過のタスク">
+        <Card title="要注意タスク" subtitle="停止中・遅延・時間超過のタスク">
           {watchList.length === 0 ? (
             <div className="empty">要注意タスクはありません</div>
           ) : (
@@ -290,7 +290,7 @@ export function ProjectDashboard({ projectId }: { projectId: string }) {
           )}
         </Card>
 
-        <Card title="リスク" subtitle="解決済みにすると Health・要判断から外れます">
+        <Card title="リスク" subtitle="解決済みにすると、状態の判定と「要判断」から外れます">
           {risks.length === 0 ? (
             <div className="empty">登録されたリスクはありません</div>
           ) : (

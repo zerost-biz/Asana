@@ -114,12 +114,12 @@ export function TimelineView({ projectId, selectedId, onOpen }: Props) {
   const rowH = 44
 
   return (
-    <section className="tl" aria-label="Timeline">
+    <section className="tl" aria-label="タイムライン">
       <div className="tl__toolbar">
         <div className="tl__legend">
           <span><i className="tl__swatch tl__swatch--bar" />期間（濃い部分＝進捗）</span>
           <span><i className="tl__swatch tl__swatch--late" />遅延</span>
-          <span><i className="tl__swatch tl__swatch--blocked" />Blocked</span>
+          <span><i className="tl__swatch tl__swatch--blocked" />停止中</span>
           <span><i className="tl__swatch tl__swatch--today" />今日（{fmtMDDate(today)}）</span>
         </div>
         <button type="button" className="btn btn--ghost" onClick={jumpToday}>
@@ -131,7 +131,7 @@ export function TimelineView({ projectId, selectedId, onOpen }: Props) {
         <div className="tl__inner" style={{ width: LEFT_W + width }}>
           {/* ヘッダー（日付軸） */}
           <div className="tl__head">
-            <div className="tl__corner" style={{ width: LEFT_W }}>WBS</div>
+            <div className="tl__corner" style={{ width: LEFT_W }}>作業項目</div>
             <div className="tl__axis" style={{ width }}>
               <div className="tl__months">
                 {months.map((m) => (
@@ -160,7 +160,7 @@ export function TimelineView({ projectId, selectedId, onOpen }: Props) {
               const left = x(m.startDate)
               const w = (daysBetween(m.startDate, m.endDate) + 1) * DAY_W - 2
               const depth = idx.byId.get(item.id)?.parentId ? 1 : 0
-              const tip = `${item.title}\n${fmtMD(m.startDate)} – ${fmtMD(m.endDate)} / 進捗 ${Math.round(m.progress)}%\nPLAN ${fmtNum(m.plan)}h  ACT ${fmtNum(m.act)}h  ETC ${fmtNum(m.etc)}h  EAC ${fmtNum(m.eac)}h`
+              const tip = `${item.title}\n${fmtMD(m.startDate)} – ${fmtMD(m.endDate)} / 進捗 ${Math.round(m.progress)}%\n計画 ${fmtNum(m.plan)}h  実績 ${fmtNum(m.act)}h  残り ${fmtNum(m.etc)}h  見込み ${fmtNum(m.eac)}h`
               return (
                 <div
                   key={item.id}

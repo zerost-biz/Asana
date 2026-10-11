@@ -1,6 +1,7 @@
 import { FolderKanban, Gauge, House, Plus, UserCheck } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { useApp } from '../store/AppContext'
+import { GlossaryButton } from './GlossaryDialog'
 import { useProjectDialog } from './ProjectDialogHost'
 import { cx } from './cx'
 
@@ -14,13 +15,13 @@ export function Sidebar() {
       <div className="nav">
         <NavLink to="/" end className={link}>
           <House size={18} />
-          <span>Home</span>
+          <span>ホーム</span>
         </NavLink>
 
         <div className="nav__row">
           <NavLink to="/projects" end className={link}>
             <FolderKanban size={18} />
-            <span>Projects</span>
+            <span>プロジェクト</span>
           </NavLink>
           <button type="button" className="nav__add" onClick={openCreate} title="プロジェクトを追加" aria-label="プロジェクトを追加">
             <Plus size={16} />
@@ -41,17 +42,18 @@ export function Sidebar() {
 
         <NavLink to="/my-work" className={link}>
           <UserCheck size={18} />
-          <span>My Work</span>
+          <span>自分の作業</span>
         </NavLink>
         <NavLink to="/workload" className={link}>
           <Gauge size={18} />
-          <span>Workload</span>
+          <span>稼働状況</span>
         </NavLink>
       </div>
 
       <div className="sidebar__foot">
+        <GlossaryButton />
         <div className="sidebar__note">
-          <strong>Prototype</strong>
+          <strong>試作版</strong>
           <span>入力内容はこのブラウザに自動保存されます</span>
         </div>
       </div>

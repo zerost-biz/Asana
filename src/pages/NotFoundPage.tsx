@@ -6,7 +6,7 @@ export function NotFoundPage({ message = 'ページが見つかりません' }: 
       <div className="empty empty--big">
         <p>{message}</p>
         <Link to="/" className="btn btn--primary">
-          Home に戻る
+          ホームに戻る
         </Link>
       </div>
     </div>

@@ -19,14 +19,14 @@ export function MembersDialog({ onClose }: { onClose: () => void }) {
       <div className="modal modal--wide" role="dialog" aria-label="メンバーと単価" onMouseDown={(e) => e.stopPropagation()}>
         <h3 className="modal__title">メンバーと単価</h3>
         <p className="modal__lead">
-          人件費（原価）＝ 工数(h) × 原価単価。実績(ACT)は<strong>入力した人</strong>の単価、残工数(ETC)・計画(PLAN)は<strong>担当者</strong>の単価で計算します。
+          人件費 ＝ 作業時間 × 時間単価。「実績」は<strong>入力した人</strong>の単価、「残り」と「計画」は<strong>担当者</strong>の単価で計算します。
           担当未設定のタスクは平均単価（{fmtYen(derived.defaultRate)}/h）を使います。変更はすぐに全画面へ反映されます。
         </p>
         <div className="members">
           <div className="members__row members__row--head">
             <span>メンバー</span>
-            <span className="num">稼働（h/週）</span>
-            <span className="num">原価単価（円/h）</span>
+            <span className="num">稼働（時間/週）</span>
+            <span className="num">時間単価（円）</span>
             <span className="num">人日単価（{HOURS_PER_DAY}h）</span>
           </div>
           {data.users.map((u) => (
@@ -40,7 +40,7 @@ export function MembersDialog({ onClose }: { onClose: () => void }) {
                 value={u.weeklyCapacity}
                 min={0}
                 step={1}
-                ariaLabel={`${u.name}の稼働時間（h/週）`}
+                ariaLabel={`${u.name}の稼働時間（時間/週）`}
                 onCommit={(n) => actions.updateUser(u.id, { weeklyCapacity: n })}
               />
               <NumInput
@@ -48,7 +48,7 @@ export function MembersDialog({ onClose }: { onClose: () => void }) {
                 value={u.hourlyRate}
                 min={0}
                 step={500}
-                ariaLabel={`${u.name}の原価単価（円/h）`}
+                ariaLabel={`${u.name}の時間単価（円）`}
                 onCommit={(n) => actions.updateUser(u.id, { hourlyRate: n })}
               />
               <span className="num members__day">{fmtYen(u.hourlyRate * HOURS_PER_DAY)}</span>

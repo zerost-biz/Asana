@@ -63,7 +63,7 @@ export function WorkCard({ item, result, onSaved }: Props) {
     toast(
       <>
         <strong>{item.title}</strong>
-        {hours > 0 ? ` に ${fmtNum(hours)}h を記録しました` : ' を更新しました'}（ACT {fmtNum(m.act)}h → {fmtNum(preview.act)}h / EAC {fmtNum(preview.eac)}h / 差異 {fmtSignedH(preview.variance)}）
+        {hours > 0 ? ` に ${fmtNum(hours)}h を記録しました` : ' を更新しました'}（実績 {fmtNum(m.act)}h → {fmtNum(preview.act)}h / 見込み {fmtNum(preview.eac)}h / 差異 {fmtSignedH(preview.variance)}）
       </>,
     )
   }
@@ -95,12 +95,12 @@ export function WorkCard({ item, result, onSaved }: Props) {
           {item.status === 'Blocked' && (
             <span className="chip chip--warn">
               <Lock size={11} strokeWidth={2.4} />
-              Blocked
+              停止中
             </span>
           )}
         </div>
         <Link to={`/projects/${item.projectId}?task=${item.id}`} className="link-btn wc__open">
-          WBSで開く
+          作業一覧で開く
         </Link>
       </header>
 
@@ -115,19 +115,19 @@ export function WorkCard({ item, result, onSaved }: Props) {
 
       <div className="pv" aria-label="工数">
         <div>
-          <span>PLAN</span>
+          <span>計画</span>
           <b>{fh(m.plan)}</b>
         </div>
         <div>
-          <span>ACT</span>
+          <span>実績</span>
           {diff(m.act, preview.act, fh)}
         </div>
         <div>
-          <span>ETC</span>
+          <span>残り</span>
           {diff(m.etc, preview.etc, fh)}
         </div>
         <div>
-          <span>EAC</span>
+          <span>見込み</span>
           {diff(m.eac, preview.eac, fh)}
         </div>
         <div className={cx(preview.variance > 0 && 'pv--over')}>
@@ -168,7 +168,7 @@ export function WorkCard({ item, result, onSaved }: Props) {
         </div>
 
         <div className="wc__field">
-          <span className="wc__label">ETC（あと何時間必要か）</span>
+          <span className="wc__label">残り（あと何時間かかるか）</span>
           <div className="stepper stepper--plain">
             <input
               type="number"
@@ -178,12 +178,12 @@ export function WorkCard({ item, result, onSaved }: Props) {
               value={completes ? '0' : etc}
               disabled={completes}
               onChange={(e) => setEtc(e.target.value)}
-              aria-label="ETC(h)"
+              aria-label="残り(h)"
             />
             <span className="stepper__unit">h</span>
           </div>
           <span className="wc__hint">
-            {completes ? '進捗100%＝完了。ETCは0hになります' : `現在 ${fmtNum(item.etcHours)}h（進捗からは自動計算されません）`}
+            {completes ? '進捗100%＝完了。残りは0hになります' : `現在 ${fmtNum(item.etcHours)}h（進捗の％からは自動計算されません）`}
           </span>
         </div>
 
@@ -232,10 +232,10 @@ export function WorkCard({ item, result, onSaved }: Props) {
           <span>
             保存しました{result.hours > 0 && `（+${fmtNum(result.hours)}h）`}
             <span className="wc__result-line">
-              ACT {fmtNum(result.before.act)}h → <b>{fmtNum(m.act)}h</b>
+              実績 {fmtNum(result.before.act)}h → <b>{fmtNum(m.act)}h</b>
             </span>
             <span className="wc__result-line">
-              EAC {fmtNum(result.before.eac)}h → <b>{fmtNum(m.eac)}h</b>
+              見込み {fmtNum(result.before.eac)}h → <b>{fmtNum(m.eac)}h</b>
             </span>
             <span className="wc__result-line">
               差異 {fmtSignedH(result.before.variance)} → <b>{fmtSignedH(m.variance)}</b>

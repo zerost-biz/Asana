@@ -12,8 +12,8 @@ export function ProjectsPage() {
   return (
     <div className="page">
       <PageHeader
-        title="Projects"
-        sub={count > 0 ? `${count}件のプロジェクト。行をクリックしてWBSを開きます` : 'まだプロジェクトがありません'}
+        title="プロジェクト"
+        sub={count > 0 ? `${count}件のプロジェクト。行をクリックすると作業項目を開きます` : 'まだプロジェクトがありません'}
         right={
           <button type="button" className="btn btn--primary" onClick={openCreate}>
             <Plus size={16} />
@@ -24,13 +24,13 @@ export function ProjectsPage() {
       {count === 0 ? (
         <div className="empty empty--big">
           <FolderPlus size={28} />
-          <p>最初のプロジェクトを追加しましょう。標準WBSテンプレートから、すぐに始められます。</p>
+          <p>最初のプロジェクトを追加しましょう。標準の作業テンプレートから、すぐに始められます。</p>
           <button type="button" className="btn btn--primary" onClick={openCreate}>
             プロジェクトを追加
           </button>
         </div>
       ) : (
-        <Card title="Project Health" flush>
+        <Card title="プロジェクトの状態" flush>
           <ProjectHealthTable />
         </Card>
       )}

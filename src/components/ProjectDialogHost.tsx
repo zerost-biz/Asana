@@ -100,7 +100,7 @@ function ProjectDialog({ state, onClose }: { state: Exclude<DialogState, null>; 
     toast(
       <>
         <strong>{name.trim()}</strong> を追加しました
-        {template === 'standard' ? '（標準WBSテンプレート）' : '。List から「タスクを追加」でWBSを作成できます'}
+        {template === 'standard' ? '（標準の作業テンプレート）' : '。「一覧」から「タスクを追加」で作業項目を作成できます'}
       </>,
     )
     onClose()
@@ -122,7 +122,7 @@ function ProjectDialog({ state, onClose }: { state: Exclude<DialogState, null>; 
         <div className="modal" role="alertdialog" aria-label="プロジェクトの削除" onMouseDown={(e) => e.stopPropagation()}>
           <h3 className="modal__title">プロジェクトを削除しますか？</h3>
           <div className="modal__body">
-            「{editing.name}」と、配下のWBS（{taskCount}件）、実績工数（TimeEntry）、リスクがすべて削除されます。
+            「{editing.name}」と、配下の作業項目（{taskCount}件）、作業時間の記録、リスクがすべて削除されます。
           </div>
           <div className="modal__foot">
             <button type="button" className="btn btn--ghost" onClick={() => setConfirmDelete(false)}>
@@ -202,8 +202,8 @@ function ProjectDialog({ state, onClose }: { state: Exclude<DialogState, null>; 
           {!isEdit && (
             <>
               <div className="field">
-                <span className="field__label">WBSの初期構成</span>
-                <div className="choices" role="radiogroup" aria-label="WBSの初期構成">
+                <span className="field__label">作業項目の初期構成</span>
+                <div className="choices" role="radiogroup" aria-label="作業項目の初期構成">
                   <button
                     type="button"
                     role="radio"
@@ -211,7 +211,7 @@ function ProjectDialog({ state, onClose }: { state: Exclude<DialogState, null>; 
                     className={cx('choice', template === 'standard' && 'is-on')}
                     onClick={() => setTemplate('standard')}
                   >
-                    <strong>標準WBSテンプレート</strong>
+                    <strong>標準の作業テンプレート</strong>
                     <span>現状分析 → To-Be設計 → ロードマップ策定（3フェーズ・8タスク / 計 {fmtNum(templateTotalHours())}h）。期間に合わせて日程を自動配置</span>
                   </button>
                   <button
@@ -222,7 +222,7 @@ function ProjectDialog({ state, onClose }: { state: Exclude<DialogState, null>; 
                     onClick={() => setTemplate('blank')}
                   >
                     <strong>空のプロジェクト</strong>
-                    <span>WBSなしで作成し、あとから List の「タスクを追加」で入力します</span>
+                    <span>作業項目なしで作成し、あとから「一覧」の「タスクを追加」で入力します</span>
                   </button>
                 </div>
               </div>
@@ -242,7 +242,7 @@ function ProjectDialog({ state, onClose }: { state: Exclude<DialogState, null>; 
                       ))}
                     </select>
                   </div>
-                  <span className="field__help">担当を設定すると、残工数（ETC）がその人の Workload に計上されます。個別の変更は WBS のドロワーから行えます。</span>
+                  <span className="field__help">担当を設定すると、残り時間がその人の稼働状況に入ります。個別の変更は、作業項目を開いて行えます。</span>
                 </label>
               )}
             </>

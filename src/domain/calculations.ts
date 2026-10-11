@@ -294,9 +294,9 @@ export function computeProjectHealth(
 
   const reasons: string[] = []
   if (pm.variance > 0 && varianceRatio >= 0.05)
-    reasons.push(`EAC +${Math.round(pm.variance * 10) / 10}h (${Math.round(varianceRatio * 100)}%)`)
+    reasons.push(`見込み +${Math.round(pm.variance * 10) / 10}時間超過 (${Math.round(varianceRatio * 100)}%)`)
   if (overdueCount > 0) reasons.push(`遅延タスク ${overdueCount}件`)
-  if (blockedCount > 0) reasons.push(`Blocked ${blockedCount}件`)
+  if (blockedCount > 0) reasons.push(`停止中 ${blockedCount}件`)
   if (highOpen) reasons.push('重大リスクあり')
 
   let auto: Health = 'GOOD'
@@ -315,7 +315,8 @@ export function computeProjectHealth(
   }
 }
 
-export const HEALTH_LABEL: Record<Health, string> = { GOOD: 'GOOD', WATCH: 'WATCH', RISK: 'RISK' }
+/** プロジェクトの状態の表示名（内部の値は GOOD / WATCH / RISK のまま） */
+export const HEALTH_LABEL: Record<Health, string> = { GOOD: '順調', WATCH: '注意', RISK: '危険' }
 
 /* ------------------------------------------------------------------ */
 /* 工数入力（My Work の保存）で WBS がどう更新されるか                  */

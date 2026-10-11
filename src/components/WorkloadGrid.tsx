@@ -19,7 +19,7 @@ interface Props {
 export const LEVEL_LABEL: Record<LoadLevel, string> = {
   normal: '通常',
   caution: '注意',
-  warn: '警告',
+  warn: '過負荷',
 }
 
 export function LoadLegend() {
@@ -27,7 +27,7 @@ export function LoadLegend() {
     <div className="load-legend" aria-label="負荷率の凡例">
       <span><i className="swatch swatch--normal" />85%未満 通常</span>
       <span><i className="swatch swatch--caution" />85〜100% 注意</span>
-      <span><i className="swatch swatch--warn" />100%超 警告</span>
+      <span><i className="swatch swatch--warn" />100%超 過負荷</span>
     </div>
   )
 }
@@ -51,7 +51,7 @@ export function WorkloadGrid({ matrix, selectedKey, onSelect, projectId, editabl
   })
 
   return (
-    <div className="wl" role="table" aria-label="Workload（人×週）">
+    <div className="wl" role="table" aria-label="稼働状況（人×週）">
       <div className="wl__row wl__row--head" role="row">
         <div role="columnheader" />
         {matrix.weeks.map((w) => (

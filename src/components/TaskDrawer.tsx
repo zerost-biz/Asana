@@ -153,8 +153,8 @@ function TaskForm({
   const errors: string[] = []
   if (!draft.title.trim()) errors.push('タスク名を入力してください')
   if (!isParent) {
-    if (!Number.isFinite(plan) || plan < 0) errors.push('PLAN は 0 以上の数値で入力してください')
-    if (!Number.isFinite(etc) || etc < 0) errors.push('ETC は 0 以上の数値で入力してください')
+    if (!Number.isFinite(plan) || plan < 0) errors.push('計画は 0 以上の数値で入力してください')
+    if (!Number.isFinite(etc) || etc < 0) errors.push('残りは 0 以上の数値で入力してください')
     if (!draft.startDate || !draft.endDate) errors.push('開始日・終了日を入力してください')
     else if (draft.endDate < draft.startDate) errors.push('終了日は開始日以降にしてください')
   }
@@ -206,7 +206,7 @@ function TaskForm({
       })
       toast(
         <>
-          <strong>{draft.title.trim()}</strong> を追加しました（PLAN {fmtNum(plan)}h / EAC {fmtNum(live.eac)}h）
+          <strong>{draft.title.trim()}</strong> を追加しました（計画 {fmtNum(plan)}h / 見込み {fmtNum(live.eac)}h）
         </>,
       )
       onOpen(id)
@@ -230,7 +230,7 @@ function TaskForm({
       })
       toast(
         <>
-          <strong>{draft.title.trim()}</strong> を保存しました：EAC {fmtNum(live.eac)}h / 差異 {fmtSignedH(live.variance)}
+          <strong>{draft.title.trim()}</strong> を保存しました：見込み {fmtNum(live.eac)}h / 差異 {fmtSignedH(live.variance)}
         </>,
       )
     }
@@ -247,7 +247,7 @@ function TaskForm({
   }
 
   const childCount = item ? descendantsOf(idx, item.id).length : 0
-  const eyebrow = isNew ? '新しいタスク' : `${derived.summaryById.get(projectId)?.shortName ?? ''}  ·  WBS ${numbers.get(item!.id) ?? ''}`
+  const eyebrow = isNew ? '新しいタスク' : `${derived.summaryById.get(projectId)?.shortName ?? ''}  ·  作業 ${numbers.get(item!.id) ?? ''}`
   const owner = derived.userById.get(draft.ownerId)
 
   const showM = isParent && itemMetrics ? itemMetrics : null
@@ -300,22 +300,22 @@ function TaskForm({
         {/* 工数サマリー */}
         <section className="metrics" aria-label="工数サマリー">
           <div className="metrics__grid">
-            <Metric label="PLAN" value={`${fmtNum(shown.plan)}h`} prev={before && before.plan !== shown.plan ? `${fmtNum(before.plan)}h` : undefined} hint="計画工数" />
-            <Metric label="ACT" value={`${fmtNum(shown.act)}h`} hint="実績（My Work入力の合計）" />
-            <Metric label="ETC" value={`${fmtNum(shown.etc)}h`} prev={before && before.etc !== shown.etc ? `${fmtNum(before.etc)}h` : undefined} hint="残工数" />
-            <Metric label="EAC" value={`${fmtNum(shown.eac)}h`} prev={before && before.eac !== shown.eac ? `${fmtNum(before.eac)}h` : undefined} strong hint="ACT + ETC" />
+            <Metric label="計画" value={`${fmtNum(shown.plan)}h`} prev={before && before.plan !== shown.plan ? `${fmtNum(before.plan)}h` : undefined} hint="最初に見積もった作業時間" />
+            <Metric label="実績" value={`${fmtNum(shown.act)}h`} hint="これまでに記録された作業時間の合計" />
+            <Metric label="残り" value={`${fmtNum(shown.etc)}h`} prev={before && before.etc !== shown.etc ? `${fmtNum(before.etc)}h` : undefined} hint="完了まで、あと何時間かかるか" />
+            <Metric label="見込み" value={`${fmtNum(shown.eac)}h`} prev={before && before.eac !== shown.eac ? `${fmtNum(before.eac)}h` : undefined} strong hint="実績 + 残り（完了までの合計時間）" />
             <Metric
               label="差異"
               value={fmtSignedH(shown.variance)}
               prev={before && before.variance !== shown.variance ? fmtSignedH(before.variance) : undefined}
               tone={shown.variance > 0 ? 'over' : shown.variance < 0 ? 'under' : undefined}
-              hint="EAC − PLAN"
+              hint="見込み − 計画（＋は計画より時間がかかる）"
             />
           </div>
           <div className="metrics__bars">
             <div>
               <div className="metrics__barlabel">
-                <span>工数消化 (ACT / PLAN)</span>
+                <span>工数消化率</span>
                 <b>{fmtPct(shown.burn)}</b>
               </div>
               <ProgressBar value={(shown.burn ?? 0) * 100} tone={(shown.burn ?? 0) > 1 ? 'watch' : 'accent'} />
@@ -335,23 +335,23 @@ function TaskForm({
             </div>
             <div className="costline__grid">
               <span title={fmtYen(costView.plan)}>
-                PLAN <b>{fmtYenShort(costView.plan)}</b>
+                計画 <b>{fmtYenShort(costView.plan)}</b>
               </span>
               <span title={fmtYen(costView.act)}>
-                ACT <b>{fmtYenShort(costView.act)}</b>
+                実績 <b>{fmtYenShort(costView.act)}</b>
               </span>
               <span title={fmtYen(costView.etc)}>
-                ETC <b>{fmtYenShort(costView.etc)}</b>
+                残り <b>{fmtYenShort(costView.etc)}</b>
               </span>
               <span title={fmtYen(costView.eac)}>
-                EAC <b>{fmtYenShort(costView.eac)}</b>
+                見込み <b>{fmtYenShort(costView.eac)}</b>
               </span>
               <span className={costView.variance > 0 ? 'is-over' : undefined} title={fmtYen(costView.variance)}>
                 差異 <b>{fmtSignedYenShort(costView.variance)}</b>
               </span>
             </div>
           </div>
-          {isParent && <p className="hint">フェーズの PLAN / ACT / ETC / EAC / 進捗は、配下タスクから自動集計されます。</p>}
+          {isParent && <p className="hint">フェーズの計画・実績・残り・見込み・進捗は、配下のタスクから自動で集計されます。</p>}
         </section>
 
         {/* フォーム */}
@@ -405,10 +405,10 @@ function TaskForm({
               </div>
 
               <div className="form__row">
-                <Field label="PLAN（計画工数 h）">
+                <Field label="計画（見積もった時間 h）">
                   <input type="number" min={0} step={0.5} inputMode="decimal" className="input input--num" value={draft.plan} onChange={(e) => set('plan', e.target.value)} />
                 </Field>
-                <Field label="ETC（残工数 h）" help="あと何時間必要かを直接入力します（進捗率から自動算出しません）">
+                <Field label="残り（あと何時間かかるか h）" help="あと何時間かかるかを直接入力します（進捗の％からは自動計算しません）">
                   <input type="number" min={0} step={0.5} inputMode="decimal" className="input input--num" value={draft.etc} onChange={(e) => set('etc', e.target.value)} />
                 </Field>
               </div>
@@ -420,7 +420,7 @@ function TaskForm({
                 </div>
               </Field>
 
-              <Field label="状態" help="完了 / 進捗100% にすると ETC は 0h になります">
+              <Field label="状態" help="完了 / 進捗100% にすると、残りは 0h になります">
                 <div className="seg" role="radiogroup" aria-label="状態">
                   {WBS_STATUSES.map((s) => (
                     <button
@@ -456,10 +456,10 @@ function TaskForm({
         {!isNew && !isParent && (
           <section className="history">
             <h3 className="section-title">
-              実績工数の履歴 <span>ACT = 合計 {fmtNum(act)}h（{entries.length}件）</span>
+              作業時間の記録 <span>実績 = 合計 {fmtNum(act)}h（{entries.length}件）</span>
             </h3>
             {entries.length === 0 ? (
-              <p className="hint">まだ実績の入力がありません。担当者が My Work から入力すると ACT に加算されます。</p>
+              <p className="hint">まだ作業時間の記録がありません。担当者が「自分の作業」から入力すると、実績に加算されます。</p>
             ) : (
               <ul className="history__list">
                 {entries.slice(0, 8).map((e) => (
@@ -480,7 +480,7 @@ function TaskForm({
 
       {confirmDelete && item && (
         <ConfirmDialog title="タスクを削除しますか？" confirmLabel="削除する" onCancel={() => setConfirmDelete(false)} onConfirm={doDelete}>
-          「{item.title}」{childCount > 0 ? `と配下の ${childCount} 件のタスク` : ''}、およびこれらの実績工数（TimeEntry）が削除されます。
+          「{item.title}」{childCount > 0 ? `と配下の ${childCount} 件のタスク` : ''}、およびこれらの作業時間の記録も削除されます。
         </ConfirmDialog>
       )}
     </>

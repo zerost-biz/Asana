@@ -77,7 +77,7 @@ export function Topbar() {
                 デモデータを初期化
               </button>
               <div className="menu__note">
-                変更内容はこのブラウザの localStorage に保存されています。初期化するとサンプルデータに戻ります。
+                変更内容はこのブラウザの中に自動で保存されています。初期化するとサンプルデータに戻ります。
               </div>
             </div>
           )}
@@ -94,7 +94,7 @@ export function Topbar() {
         >
           {(close) => (
             <div className="menu">
-              <div className="menu__title">操作ユーザー（My Work の対象）</div>
+              <div className="menu__title">操作ユーザー（「自分の作業」の対象）</div>
               {data.users.map((u) => (
                 <button
                   key={u.id}
@@ -127,7 +127,7 @@ export function Topbar() {
             toast('デモデータを初期化しました', 'info')
           }}
         >
-          WBS・工数入力（TimeEntry）・ETC・進捗・日付など、これまでの変更はすべて破棄され、サンプルデータへ戻ります。
+          作業項目・作業時間の記録・残り・進捗・日付など、これまでの変更はすべて破棄され、サンプルデータへ戻ります。
         </ConfirmDialog>
       )}
     </header>
