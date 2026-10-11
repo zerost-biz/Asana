@@ -1,4 +1,5 @@
 import { CheckCircle2, X } from 'lucide-react'
+import { daysBetween } from '../domain/dates'
 import { useMemo, useState } from 'react'
 import { Avatar } from '../components/Avatar'
 import { Card } from '../components/Card'
@@ -20,16 +21,38 @@ export function MyWorkPage() {
   const [results, setResults] = useState<Record<string, SaveResult>>({})
 
   const mine = useMemo(
-    () => derived.leaves.filter((l) => l.ownerId === me.id && (l.status !== 'Done' || pinned.has(l.id))),
+    () => derived.leaves.filter((l) => l.ownerId === me.id && l.type !== 'milestone' && (l.status !== 'done' || pinned.has(l.id))),
     [derived.leaves, me.id, pinned],
   )
   const projectsOfMine = useMemo(() => Array.from(new Set(mine.map((l) => l.projectId))), [mine])
 
   const tasks = useMemo(() => {
     const list = mine.filter((l) => projectFilter === 'all' || l.projectId === projectFilter)
-    const rank = (l: (typeof list)[number]) => (l.status === 'Done' ? 3 : l.endDate < todayISO ? 0 : l.status === 'Blocked' ? 1 : 2)
+    const rank = (l: (typeof list)[number]) => (l.status === 'done' ? 3 : l.endDate < todayISO ? 0 : l.status === 'blocked' ? 1 : 2)
     return [...list].sort((a, b) => rank(a) - rank(b) || (a.endDate < b.endDate ? -1 : a.endDate > b.endDate ? 1 : 0))
   }, [mine, projectFilter, todayISO])
+
+  /** 今日: 期限超過・停止中・期限が近い・優先度が高く進行中 / 今週: 今週に期間がかかるもの / 今後: それ以外 */
+  const sections = useMemo(() => {
+    const w0s = weeks[0].startISO
+    const w0e = weeks[0].endISO
+    const soon = data.settings.deadlineSoonDays
+    const today: typeof tasks = []
+    const week: typeof tasks = []
+    const later: typeof tasks = []
+    for (const l of tasks) {
+      const open = l.status !== 'done'
+      const isToday =
+        open && (l.endDate < todayISO || l.status === 'blocked' || (l.endDate >= todayISO && daysBetween(todayISO, l.endDate) <= soon) || (l.priority === 'high' && l.status === 'in_progress'))
+      if (isToday || pinned.has(l.id)) today.push(l)
+      else if (l.startDate <= w0e && l.endDate >= w0s) week.push(l)
+      else later.push(l)
+    }
+    return { today, week, later }
+  }, [tasks, weeks, todayISO, data.settings.deadlineSoonDays, pinned])
+
+  const overdueCount = mine.filter((l) => l.status !== 'done' && l.endDate < todayISO).length
+  const blockedCount = mine.filter((l) => l.status === 'blocked').length
 
   const myEntries = data.timeEntries.filter((e) => e.userId === me.id)
   const todayEntries = myEntries.filter((e) => e.date === todayISO)
@@ -49,7 +72,7 @@ export function MyWorkPage() {
     <div className="page page--mywork">
       <PageHeader
         title="自分の作業"
-        sub={`${fmtFull(today)}  ·  ${me.name}が担当する未完了タスク ${mine.filter((l) => l.status !== 'Done').length}件`}
+        sub={`${fmtFull(today)}  ·  ${me.name}が担当する未完了タスク ${mine.filter((l) => l.status !== 'done').length}件`}
         right={
           <div className="usersw" role="radiogroup" aria-label="ユーザー切替">
             {data.users.map((u) => (
@@ -88,19 +111,38 @@ export function MyWorkPage() {
           <p>{me.name}の未完了タスクはありません</p>
         </div>
       ) : (
-        <div className="wc-grid">
-          {tasks.map((item) => (
-            <WorkCard
-              key={`${item.id}:${item.etcHours}:${item.progress}:${item.status}`}
-              item={item}
-              result={results[item.id]}
-              onSaved={(id, r) => {
-                setPinned((p) => new Set(p).add(id))
-                setResults((prev) => ({ ...prev, [id]: r }))
-              }}
-            />
-          ))}
-        </div>
+        <>
+          {(
+            [
+              ['today', '今日やること', '期限が過ぎたもの・停止中・期限が近いもの・優先度が高いもの', sections.today],
+              ['week', '今週の作業', '今週に予定がかかっている作業', sections.week],
+              ['later', '今後の作業', 'まだ先の予定の作業', sections.later],
+            ] as const
+          ).map(([key, title, sub, list]) =>
+            list.length === 0 ? null : (
+              <section key={key} className="mw-sec" aria-label={title}>
+                <h2 className="mw-sec__title">
+                  {title}
+                  <span className="count-pill">{list.length}</span>
+                  <small>{sub}</small>
+                </h2>
+                <div className="wc-grid">
+                  {list.map((item) => (
+                    <WorkCard
+                      key={`${item.id}:${item.etcHours}:${item.progress}:${item.status}`}
+                      item={item}
+                      result={results[item.id]}
+                      onSaved={(id, r) => {
+                        setPinned((p) => new Set(p).add(id))
+                        setResults((prev) => ({ ...prev, [id]: r }))
+                      }}
+                    />
+                  ))}
+                </div>
+              </section>
+            ),
+          )}
+        </>
       )}
 
       {todayEntries.length > 0 && (
@@ -140,6 +182,16 @@ export function MyWorkPage() {
           <span>今週の予定（残り時間の配分）</span>
           <b>{fmtNum(weekPlanned)}<i>h</i></b>
           <small>負荷 {Math.round((weekPlanned / me.weeklyCapacity) * 100)}%</small>
+        </div>
+        <div className={cx('sum', overdueCount > 0 && 'sum--warn')}>
+          <span>期限を過ぎた作業</span>
+          <b>{overdueCount}<i>件</i></b>
+          <small>{overdueCount > 0 ? '終了日や残りの見直しを' : 'ありません'}</small>
+        </div>
+        <div className={cx('sum', blockedCount > 0 && 'sum--warn')}>
+          <span>停止中の作業</span>
+          <b>{blockedCount}<i>件</i></b>
+          <small>{blockedCount > 0 ? 'リーダーへ相談しましょう' : 'ありません'}</small>
         </div>
       </div>
     </div>

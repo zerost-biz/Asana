@@ -1,4 +1,4 @@
-import { FolderKanban, ListChecks, Search } from 'lucide-react'
+import { Filter, FolderKanban, ListChecks, Search, User } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../store/AppContext'
@@ -13,13 +13,15 @@ export function SearchBox() {
 
   const query = q.trim().toLowerCase()
   const results = useMemo(() => {
-    if (!query) return { projects: [], tasks: [] }
+    if (!query) return { projects: [], tasks: [], opps: [], people: [] }
     const projects = data.projects.filter((p) => p.name.toLowerCase().includes(query)).slice(0, 4)
     const tasks = derived.leaves
       .filter((l) => l.title.toLowerCase().includes(query))
       .slice(0, 6)
-    return { projects, tasks }
-  }, [query, data.projects, derived.leaves])
+    const opps = data.opportunities.filter((o) => o.title.toLowerCase().includes(query) || (derived.customerById.get(o.customerId)?.name ?? '').toLowerCase().includes(query)).slice(0, 3)
+    const people = data.users.filter((u) => u.name.toLowerCase().includes(query)).slice(0, 3)
+    return { projects, tasks, opps, people }
+  }, [query, data.projects, data.opportunities, data.users, derived.leaves, derived.customerById])
 
   const go = (to: string) => {
     navigate(to)
@@ -28,7 +30,7 @@ export function SearchBox() {
   }
 
   const show = focused && query.length > 0
-  const empty = results.projects.length + results.tasks.length === 0
+  const empty = results.projects.length + results.tasks.length + results.opps.length + results.people.length === 0
 
   return (
     <div className="search">
@@ -40,7 +42,7 @@ export function SearchBox() {
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         onKeyDown={(e) => e.key === 'Escape' && (setQ(''), inputRef.current?.blur())}
-        placeholder="プロジェクト・タスクを検索"
+        placeholder="プロジェクト・作業・案件・メンバーを検索"
         aria-label="検索"
       />
       {show && (
@@ -53,8 +55,22 @@ export function SearchBox() {
               <em>プロジェクト</em>
             </button>
           ))}
+          {results.opps.map((o) => (
+            <button key={o.id} type="button" className="search__item" onClick={() => go(`/pipeline/${o.id}`)}>
+              <Filter size={15} />
+              <span>{o.title}</span>
+              <em>受注見込み</em>
+            </button>
+          ))}
+          {results.people.map((u) => (
+            <button key={u.id} type="button" className="search__item" onClick={() => go(`/people/${u.id}`)}>
+              <User size={15} />
+              <span>{u.name}</span>
+              <em>メンバー</em>
+            </button>
+          ))}
           {results.tasks.map((t) => (
-            <button key={t.id} type="button" className="search__item" onClick={() => go(`/projects/${t.projectId}?task=${t.id}`)}>
+            <button key={t.id} type="button" className="search__item" onClick={() => go(`/projects/${t.projectId}/wbs?task=${t.id}`)}>
               <ListChecks size={15} />
               <span>
                 {derived.numbers.get(t.id)} {t.title}

@@ -19,7 +19,7 @@ export function ProjectHealthTable() {
         <div role="columnheader">状態</div>
         <div />
       </div>
-      {derived.summaries.map((s) => {
+      {derived.summaries.filter((s) => s.project.status !== 'completed' && s.project.status !== 'archived').map((s) => {
         const { totals } = s
         const burnPct = (totals.burn ?? 0) * 100
         const over = totals.variance > 0

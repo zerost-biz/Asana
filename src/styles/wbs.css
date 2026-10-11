@@ -45,12 +45,12 @@
 }
 
 .wbs__table {
-  min-width: 940px;
+  min-width: 980px;
 }
 
 .wbs__row {
   display: grid;
-  grid-template-columns: minmax(210px, 1fr) 100px 46px 46px 56px 56px 56px 58px 74px 98px 88px;
+  grid-template-columns: minmax(210px, 1fr) 100px 46px 46px 56px 56px 56px 58px 74px 98px 88px 32px;
   column-gap: 6px;
   align-items: center;
   min-height: 52px;
@@ -301,7 +301,7 @@ button.chev:hover {
   }
 
   .wbs__row {
-    grid-template-columns: minmax(120px, 1fr) 46px 46px 46px 50px 68px 86px 78px;
+    grid-template-columns: minmax(120px, 1fr) 46px 46px 46px 50px 68px 86px 78px 32px;
     padding: 0 10px;
   }
 
@@ -343,4 +343,77 @@ button.chev:hover {
   background: #fff;
   color: var(--accent-strong);
   box-shadow: var(--shadow-sm), 0 0 0 1px var(--border);
+}
+
+/* 作業項目の補助表示 */
+.wbs__ind {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+  padding: 1px 4px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-3);
+}
+
+a.wbs__ind:hover {
+  background: var(--accent-soft-2);
+  color: var(--accent-strong);
+}
+
+.wbs__ind.is-bad {
+  color: var(--warn);
+  background: var(--warn-bg);
+}
+
+.wbs__ind--risk {
+  color: var(--warn);
+}
+
+.wbs__dash {
+  color: var(--text-3);
+}
+
+.wbs__menu {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.wbs__menu .icon-btn {
+  opacity: 0.55;
+}
+
+.wbs__row:hover .wbs__menu .icon-btn,
+.wbs__menu .icon-btn.is-active {
+  opacity: 1;
+}
+
+.wbs__row--ms {
+  background: #fcfbff;
+}
+
+.wbs__mscell {
+  grid-column: span 5;
+  font-size: 12px;
+  color: var(--accent-strong);
+  font-weight: 600;
+}
+
+.menu__item--danger {
+  color: var(--risk);
+}
+
+.menu__item:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.wbs__toolbar-left {
+  flex-wrap: wrap;
+}
+
+.wbs__toolbar {
+  flex-wrap: wrap;
 }

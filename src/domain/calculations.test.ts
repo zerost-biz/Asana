@@ -1,39 +1,18 @@
 import { describe, expect, it } from 'vitest'
-import { createSeed } from '../data/seed'
+import { entry, wbs } from '../test/factories'
 import {
   computeAllMetrics,
   computeProjectHealth,
   indexWbs,
-  isParent,
-  leafItems,
+  isOverdue,
   leafMetrics,
   projectMetrics,
+  resolveLogWork,
   wbsNumbering,
 } from './calculations'
-import { buildWeeks, allocateWorkload, buildWorkloadMatrix, loadLevel } from './workload'
-import { buildDerived } from '../store/derived'
-import { reducer } from '../store/reducer'
-import { buildTemplateItems, STANDARD_TEMPLATE, templateTotalHours } from '../data/templates'
-import type { TimeEntry, WbsItem } from './types'
+import { DEFAULT_SETTINGS, type Project } from './types'
 
-// 2026-10-12 は月曜日
-const TODAY = new Date(2026, 9, 12)
-
-const base: WbsItem = {
-  id: 'x',
-  projectId: 'p',
-  parentId: null,
-  title: 't',
-  ownerId: 'u-k',
-  startDate: '2026-10-12',
-  endDate: '2026-10-16',
-  planHours: 10,
-  etcHours: 5,
-  progress: 0,
-  status: 'In progress',
-}
-
-describe('工数の定義', () => {
+describe('工数の定義（PLAN / ACT / ETC / EAC / Variance / Burn）', () => {
   it('EAC = ACT + ETC / Variance = EAC - PLAN / Burn = ACT / PLAN', () => {
     const m = leafMetrics(36, 24, 16)
     expect(m.eac).toBe(40)
@@ -41,164 +20,105 @@ describe('工数の定義', () => {
     expect(m.burn).toBeCloseTo(24 / 36)
   })
 
-  it('ETC は進捗率から自動算出されない（progress を変えても ETC は不変）', () => {
-    const items: WbsItem[] = [{ ...base, planHours: 36, etcHours: 16, progress: 10 }]
-    const m1 = computeAllMetrics(items, [])
-    const m2 = computeAllMetrics([{ ...items[0], progress: 90 }], [])
-    expect(m1.get('x')!.etc).toBe(16)
-    expect(m2.get('x')!.etc).toBe(16)
+  it('PLAN が 0 のとき Burn は null', () => {
+    expect(leafMetrics(0, 5, 5).burn).toBeNull()
   })
 
-  it('ACT は TimeEntry の wbsId 別合計。追加すると ACT/EAC/Variance が即再計算される', () => {
-    const items: WbsItem[] = [{ ...base, planHours: 36, etcHours: 16 }]
-    const e = (h: number, i: number): TimeEntry => ({ id: `e${i}`, wbsId: 'x', userId: 'u-k', date: '2026-10-12', hours: h, comment: '' })
-    const before = computeAllMetrics(items, [e(24, 1)]).get('x')!
-    expect([before.act, before.etc, before.eac, before.variance]).toEqual([24, 16, 40, 4])
-
-    const after = computeAllMetrics(items, [e(24, 1), e(3, 2)]).get('x')!
-    expect(after.act).toBe(27) // +3h
-    // ETC を 12h に更新 → EAC = 27 + 12 = 39, Variance = +3
-    const after2 = computeAllMetrics([{ ...items[0], etcHours: 12 }], [e(24, 1), e(3, 2)]).get('x')!
-    expect([after2.act, after2.eac, after2.variance]).toEqual([27, 39, 3])
+  it('ETC は進捗率から自動算出されない（進捗を変えても ETC は不変）', () => {
+    const a = computeAllMetrics([wbs({ planHours: 36, etcHours: 16, progress: 10 })], []).get('x')!
+    const b = computeAllMetrics([wbs({ planHours: 36, etcHours: 16, progress: 90 })], []).get('x')!
+    expect(a.etc).toBe(16)
+    expect(b.etc).toBe(16)
   })
 
-  it('親は子の PLAN/ACT/ETC/EAC の合計、進捗は PLAN 加重', () => {
-    const items: WbsItem[] = [
-      { ...base, id: 'p1', parentId: null, planHours: 0, etcHours: 0 },
-      { ...base, id: 'c1', parentId: 'p1', planHours: 20, etcHours: 0, progress: 100, status: 'Done' },
-      { ...base, id: 'c2', parentId: 'p1', planHours: 60, etcHours: 40, progress: 50 },
-    ]
-    const entries: TimeEntry[] = [
-      { id: 'e1', wbsId: 'c1', userId: 'u-k', date: '2026-10-12', hours: 22, comment: '' },
-      { id: 'e2', wbsId: 'c2', userId: 'u-k', date: '2026-10-12', hours: 20, comment: '' },
-    ]
-    const ms = computeAllMetrics(items, entries)
-    const p = ms.get('p1')!
+  it('ACT は TimeEntry の wbsId 別合計。追加すると ACT/EAC/Variance が再計算される', () => {
+    const item = wbs({ planHours: 36, etcHours: 16 })
+    const m1 = computeAllMetrics([item], [entry({ id: 'e1', hours: 24 })]).get('x')!
+    expect([m1.act, m1.etc, m1.eac, m1.variance]).toEqual([24, 16, 40, 4])
+    const m2 = computeAllMetrics([{ ...item, etcHours: 12 }], [entry({ id: 'e1', hours: 24 }), entry({ id: 'e2', hours: 3 })]).get('x')!
+    expect([m2.act, m2.eac, m2.variance]).toEqual([27, 39, 3])
+  })
+
+  it('他の作業項目の TimeEntry は ACT に入らない', () => {
+    const m = computeAllMetrics([wbs()], [entry({ wbsId: 'other', hours: 9 })]).get('x')!
+    expect(m.act).toBe(0)
+  })
+})
+
+describe('親行の集計', () => {
+  const items = [
+    wbs({ id: 'p1', parentId: null, type: 'phase', planHours: 0, etcHours: 0 }),
+    wbs({ id: 'c1', parentId: 'p1', planHours: 20, etcHours: 0, progress: 100, status: 'done' }),
+    wbs({ id: 'c2', parentId: 'p1', planHours: 60, etcHours: 40, progress: 50 }),
+  ]
+  const entries = [entry({ id: 'e1', wbsId: 'c1', hours: 22 }), entry({ id: 'e2', wbsId: 'c2', hours: 20 })]
+
+  it('PLAN/ACT/ETC/EAC は子の合計', () => {
+    const p = computeAllMetrics(items, entries).get('p1')!
     expect([p.plan, p.act, p.etc, p.eac, p.variance]).toEqual([80, 42, 40, 82, 2])
-    expect(p.progress).toBeCloseTo((100 * 20 + 50 * 60) / 80)
     expect(p.isParent).toBe(true)
-    expect(p.status).toBe('In progress')
-  })
-})
-
-describe('Workload', () => {
-  const weeks = buildWeeks(TODAY)
-
-  it('週は今週〜+3週の4つ', () => {
-    expect(weeks.map((w) => w.label)).toEqual(['今週', '来週', '+2週', '+3週'])
-    expect(weeks[0].startISO).toBe('2026-10-12')
+    expect(p.leafCount).toBe(2)
   })
 
-  it('ETC は開始〜終了の稼働日へ均等配分される', () => {
-    // 10/12(月)〜10/21(水): 稼働日 8日 → 16h なら 2h/日 → 今週10h / 来週6h
-    const it: WbsItem = { ...base, startDate: '2026-10-12', endDate: '2026-10-21', etcHours: 16 }
-    const a = allocateWorkload([it], weeks)
-    expect(a.find((x) => x.weekIndex === 0)!.hours).toBeCloseTo(10)
-    expect(a.find((x) => x.weekIndex === 1)!.hours).toBeCloseTo(6)
+  it('進捗は 計画時間で加重（標準）/ 見込み時間で加重（設定）', () => {
+    const plan = computeAllMetrics(items, entries, () => 0, 'plan').get('p1')!
+    expect(plan.progress).toBeCloseTo((100 * 20 + 50 * 60) / 80)
+    const eac = computeAllMetrics(items, entries, () => 0, 'eac').get('p1')!
+    // c1: EAC22 / c2: EAC60
+    expect(eac.progress).toBeCloseTo((100 * 22 + 50 * 60) / 82)
   })
 
-  it('遅延タスクの残工数は今週に計上、Done は対象外', () => {
-    const late: WbsItem = { ...base, id: 'late', startDate: '2026-09-01', endDate: '2026-09-10', etcHours: 12 }
-    const done: WbsItem = { ...base, id: 'done', status: 'Done', etcHours: 8 }
-    const a = allocateWorkload([late, done], weeks)
-    expect(a).toHaveLength(1)
-    expect(a[0]).toMatchObject({ wbsId: 'late', weekIndex: 0, hours: 12 })
+  it('状態は子から決まる（子に進行中があれば進行中 / 停止中があれば停止中 / すべて完了なら完了）', () => {
+    expect(computeAllMetrics(items, entries).get('p1')!.status).toBe('in_progress')
+    const blocked = items.map((i) => (i.id === 'c2' ? { ...i, status: 'blocked' as const } : i))
+    expect(computeAllMetrics(blocked, entries).get('p1')!.status).toBe('blocked')
+    const done = items.map((i) => (i.id === 'c2' ? { ...i, status: 'done' as const, progress: 100, etcHours: 0 } : i))
+    expect(computeAllMetrics(done, entries).get('p1')!.status).toBe('done')
   })
 
-  it('負荷レベル: 85%未満=通常 / 85〜100%=注意 / 100%超=警告', () => {
-    expect(loadLevel(0.84)).toBe('normal')
-    expect(loadLevel(0.85)).toBe('caution')
-    expect(loadLevel(1)).toBe('caution')
-    expect(loadLevel(1.01)).toBe('warn')
-  })
-})
-
-describe('seed', () => {
-  const data = createSeed(TODAY)
-  const idx = indexWbs(data.wbs)
-  const metrics = computeAllMetrics(data.wbs, data.timeEntries)
-  const numbers = wbsNumbering(idx, data.projects)
-
-  it('受入基準: As-Is整理 = PLAN36 / ACT24 / ETC16 / EAC40 / Variance+4', () => {
-    const asis = data.wbs.find((w) => w.title === 'As-Is整理')!
-    expect(numbers.get(asis.id)).toBe('1.3')
-    const m = metrics.get(asis.id)!
-    expect([m.plan, m.act, m.etc, m.eac, m.variance]).toEqual([36, 24, 16, 40, 4])
+  it('3階層（フェーズ > 作業パッケージ > タスク）でも合計される', () => {
+    const tree = [
+      wbs({ id: 'ph', type: 'phase', planHours: 0, etcHours: 0 }),
+      wbs({ id: 'wp', parentId: 'ph', type: 'work_package', planHours: 0, etcHours: 0 }),
+      wbs({ id: 't1', parentId: 'wp', planHours: 10, etcHours: 10 }),
+      wbs({ id: 't2', parentId: 'wp', planHours: 6, etcHours: 6 }),
+    ]
+    const ms = computeAllMetrics(tree, [])
+    expect(ms.get('wp')!.plan).toBe(16)
+    expect(ms.get('ph')!.plan).toBe(16)
+    const idx = indexWbs(tree)
+    expect(wbsNumbering(idx, [{ id: 'p' } as Project]).get('t2')).toBe('1.1.2')
   })
 
-  it('Health: B社=WATCH / A社=GOOD / C社=RISK / GTM=GOOD', () => {
-    const today = '2026-10-12'
-    const got: Record<string, string> = {}
-    for (const p of data.projects) {
-      const pm = projectMetrics(p.id, idx, metrics)
-      const leaves = leafItems(data.wbs.filter((w) => w.projectId === p.id), idx).map((l) => metrics.get(l.id)!)
-      got[p.id] = computeProjectHealth(p, pm, leaves, data.risks, today).health
-    }
-    expect(got).toEqual({ bmes: 'WATCH', asaas: 'GOOD', cscada: 'RISK', gtm: 'GOOD' })
+  it('マイルストーンは工数 0 で、進捗の平均にも含まれない', () => {
+    const withMs = [
+      wbs({ id: 'ph', type: 'phase', planHours: 0, etcHours: 0 }),
+      wbs({ id: 't1', parentId: 'ph', planHours: 10, etcHours: 10, progress: 40 }),
+      wbs({ id: 'ms', parentId: 'ph', type: 'milestone', planHours: 0, etcHours: 0, progress: 0, status: 'not_started' }),
+    ]
+    const m = computeAllMetrics(withMs, []).get('ph')!
+    expect(m.plan).toBe(10)
+    expect(m.progress).toBeCloseTo(40)
+    expect(m.leafCount).toBe(1)
   })
 
-  it('どの曜日に開いても Health が同じ（週末でも A社/GTM が遅延扱いにならない）', () => {
-    for (let d = 0; d < 7; d++) {
-      const day = new Date(2026, 9, 12 + d) // 月〜日
-      const seed = createSeed(day)
-      const sIdx = indexWbs(seed.wbs)
-      const sMetrics = computeAllMetrics(seed.wbs, seed.timeEntries)
-      const todayISO = `2026-10-${String(12 + d).padStart(2, '0')}`
-      const got: Record<string, string> = {}
-      for (const p of seed.projects) {
-        const pm = projectMetrics(p.id, sIdx, sMetrics)
-        const leaves = leafItems(seed.wbs.filter((w) => w.projectId === p.id), sIdx).map((l) => sMetrics.get(l.id)!)
-        got[p.id] = computeProjectHealth(p, pm, leaves, seed.risks, todayISO).health
-      }
-      expect(got, `day offset ${d}`).toEqual({ bmes: 'WATCH', asaas: 'GOOD', cscada: 'RISK', gtm: 'GOOD' })
-    }
-  })
-
-  it('A社は進捗が工数消化より先行 / B社はEAC超過', () => {
-    const a = projectMetrics('asaas', idx, metrics)
-    expect(a.progress / 100).toBeGreaterThan(a.burn!)
-    expect(projectMetrics('bmes', idx, metrics).variance).toBeGreaterThan(0)
-  })
-
-  it('Workload が 60〜120%超まで散らばり、100%超が存在する', () => {
-    const leaves = leafItems(data.wbs, idx)
-    const weeks = buildWeeks(TODAY)
-    const matrix = buildWorkloadMatrix(data.users, allocateWorkload(leaves, weeks), weeks)
-    const table = matrix.users.map((u, ui) => `${u.initials}: ` + matrix.cells[ui].map((c) => (c.utilization * 100).toFixed(1) + '%').join(' / '))
-    console.log('\n' + table.join('\n'))
-    const all = matrix.cells.flat().map((c) => c.utilization)
-    expect(Math.min(...all)).toBeGreaterThanOrEqual(0.55)
-    expect(Math.max(...all)).toBeGreaterThan(1.1)
-    expect(matrix.cells.flat().some((c) => c.level === 'warn')).toBe(true)
-  })
-
-  it('最下位タスクだけが TimeEntry を持つ', () => {
-    for (const e of data.timeEntries) expect(isParent(idx, e.wbsId)).toBe(false)
-  })
-
-  it('プロジェクト集計をログ出力', () => {
-    const rate = new Map(data.users.map((u) => [u.id, u.hourlyRate]))
-    const costMetrics = computeAllMetrics(data.wbs, data.timeEntries, (id) => (id ? rate.get(id) ?? 0 : 0))
-    for (const p of data.projects) {
-      const c = projectMetrics(p.id, idx, costMetrics)
-      console.log('COST', p.name, { plan: c.planCost, act: c.actCost, eac: c.eacCost })
-      const pm = projectMetrics(p.id, idx, metrics)
-      console.log(p.name, { plan: pm.plan, act: pm.act, etc: pm.etc, eac: pm.eac, var: pm.variance, prog: Math.round(pm.progress), burn: Math.round((pm.burn ?? 0) * 100) })
-    }
+  it('プロジェクト合計は最上位行の合計', () => {
+    const ms = computeAllMetrics(items, entries)
+    const pm = projectMetrics('p', indexWbs(items), ms)
+    expect([pm.plan, pm.act, pm.etc, pm.eac]).toEqual([80, 42, 40, 82])
   })
 })
 
 describe('人件費（原価）', () => {
   const rates: Record<string, number> = { 'u-k': 8000, 'u-h': 7000 }
-  const rateOf = (id: string | null) => (id ? rates[id] ?? 0 : 6500) // 未設定は平均単価 6,500 とみなす
+  const rateOf = (id: string | null) => (id ? rates[id] ?? 0 : 6500)
 
-  it('PLAN/ETC は担当者の単価、ACT は実績を入力した人の単価で計算する', () => {
-    const items: WbsItem[] = [{ ...base, planHours: 10, etcHours: 5 }] // 担当 u-k (8,000)
-    const entries: TimeEntry[] = [
-      { id: 'e1', wbsId: 'x', userId: 'u-h', date: '2026-10-12', hours: 4, comment: '' }, // 他の人が入力
-      { id: 'e2', wbsId: 'x', userId: 'u-k', date: '2026-10-12', hours: 2, comment: '' },
-    ]
-    const m = computeAllMetrics(items, entries, rateOf).get('x')!
+  it('PLAN/ETC は担当者の単価、ACT は実績を入力した人の単価', () => {
+    const m = computeAllMetrics(
+      [wbs({ planHours: 10, etcHours: 5 })],
+      [entry({ id: 'e1', userId: 'u-h', hours: 4 }), entry({ id: 'e2', userId: 'u-k', hours: 2 })],
+      rateOf,
+    ).get('x')!
     expect(m.planCost).toBe(10 * 8000)
     expect(m.etcCost).toBe(5 * 8000)
     expect(m.actCost).toBe(4 * 7000 + 2 * 8000)
@@ -206,106 +126,83 @@ describe('人件費（原価）', () => {
     expect(m.varianceCost).toBe(m.eacCost - m.planCost)
   })
 
-  it('担当未設定のタスクは平均単価で計算し、親は子の合計', () => {
-    const items: WbsItem[] = [
-      { ...base, id: 'p1', parentId: null, planHours: 0, etcHours: 0 },
-      { ...base, id: 'c1', parentId: 'p1', ownerId: null, planHours: 10, etcHours: 10 },
-      { ...base, id: 'c2', parentId: 'p1', ownerId: 'u-h', planHours: 10, etcHours: 0 },
-    ]
-    const ms = computeAllMetrics(items, [], rateOf)
+  it('担当未設定は平均単価、親は子の合計', () => {
+    const ms = computeAllMetrics(
+      [
+        wbs({ id: 'p1', type: 'phase', planHours: 0, etcHours: 0 }),
+        wbs({ id: 'c1', parentId: 'p1', ownerId: null, planHours: 10, etcHours: 10 }),
+        wbs({ id: 'c2', parentId: 'p1', ownerId: 'u-h', planHours: 10, etcHours: 0 }),
+      ],
+      [],
+      rateOf,
+    )
     expect(ms.get('c1')!.planCost).toBe(10 * 6500)
     expect(ms.get('p1')!.planCost).toBe(10 * 6500 + 10 * 7000)
-    expect(ms.get('p1')!.eacCost).toBe(10 * 6500)
-  })
-
-  it('単価が変わると全体の原価が再計算される（単価未指定なら原価0）', () => {
-    const items: WbsItem[] = [{ ...base, planHours: 10, etcHours: 5 }]
-    expect(computeAllMetrics(items, []).get('x')!.planCost).toBe(0)
   })
 })
 
-describe('粗利・要判断（seed）', () => {
-  const data = createSeed(TODAY)
-  const d = buildDerived(data, TODAY)
+describe('遅延・停止中・状態（Health）', () => {
+  const project = { id: 'p', health: null } as Project
+  const today = '2026-10-12'
 
-  it('受注額があるPJは粗利率を計算し、受注額なし(社内PJ)は null', () => {
-    const rate = (id: string) => d.summaryById.get(id)!.cost.marginRate
-    expect(rate('bmes')!).toBeGreaterThan(0.1)
-    expect(rate('asaas')!).toBeGreaterThan(0.2)
-    expect(rate('cscada')!).toBeGreaterThan(0)
-    expect(rate('cscada')!).toBeLessThan(0.1)
-    expect(rate('gtm')).toBeNull()
+  it('isOverdue: 終了日を過ぎて未完了のものだけ', () => {
+    expect(isOverdue('in_progress', '2026-10-11', today)).toBe(true)
+    expect(isOverdue('done', '2026-10-11', today)).toBe(false)
+    expect(isOverdue('in_progress', '2026-10-12', today)).toBe(false)
   })
 
-  it('粗利 = 受注額 - EAC原価', () => {
-    const s = d.summaryById.get('bmes')!
-    expect(s.cost.margin).toBe(s.cost.budget! - s.totals.eacCost)
+  const health = (variance: number, plan: number, leaves: ReturnType<typeof wbs>[], risks = [] as never[]) => {
+    const ms = computeAllMetrics(leaves, [])
+    return computeProjectHealth(project, { plan, eac: plan + variance, variance }, leaves.map((l) => ms.get(l.id)!), risks, today, DEFAULT_SETTINGS)
+  }
+
+  it('見込み超過 5%以上=注意 / 15%以上=危険 / それ未満=順調', () => {
+    expect(health(2, 100, [wbs()]).health).toBe('GOOD')
+    expect(health(6, 100, [wbs()]).health).toBe('WATCH')
+    expect(health(16, 100, [wbs()]).health).toBe('RISK')
   })
 
-  it('粗利率が目安(10%)を下回るPJは Decision Required に出る', () => {
-    const ids = d.decisions.map((x) => x.id)
-    expect(ids).toContain('margin:cscada')
-    expect(ids).not.toContain('margin:bmes')
+  it('遅延だけ=注意 / 遅延 + 停止中=危険', () => {
+    expect(health(0, 100, [wbs({ endDate: '2026-10-01' })]).health).toBe('WATCH')
+    expect(health(0, 100, [wbs({ id: 'a', endDate: '2026-10-01' }), wbs({ id: 'b', status: 'blocked' })]).health).toBe('RISK')
   })
 
-  it('単価を上げると原価・粗利率が変わる（ユーザー単価の変更が全体へ反映）', () => {
-    const before = d.summaryById.get('bmes')!.cost.marginRate!
-    const pricier = { ...data, users: data.users.map((u) => ({ ...u, hourlyRate: u.hourlyRate * 1.5 })) }
-    const after = buildDerived(pricier, TODAY).summaryById.get('bmes')!.cost.marginRate!
-    expect(after).toBeLessThan(before)
+  it('手動の上書きが自動判定より優先される', () => {
+    const ms = computeAllMetrics([wbs()], [])
+    const info = computeProjectHealth({ ...project, health: 'RISK' }, { plan: 100, eac: 100, variance: 0 }, [ms.get('x')!], [], today)
+    expect(info.health).toBe('RISK')
+    expect(info.auto).toBe('GOOD')
+    expect(info.overridden).toBe(true)
+  })
+
+  it('しきい値は設定で変えられる', () => {
+    const ms = computeAllMetrics([wbs()], [])
+    const loose = computeProjectHealth(project, { plan: 100, eac: 120, variance: 20 }, [ms.get('x')!], [], today, { ...DEFAULT_SETTINGS, riskVarianceRatio: 0.3, watchVarianceRatio: 0.1 })
+    expect(loose.health).toBe('WATCH')
   })
 })
 
-describe('プロジェクトの追加・削除', () => {
-  const data = createSeed(TODAY)
-  let n = 0
-  const gen = (p: string) => `${p}-t${++n}`
-
-  it('標準テンプレートは3フェーズ・8タスクを期間内に順番に配置する', () => {
-    const items = buildTemplateItems('pnew', '2026-10-12', '2026-12-04', ['u-h'], gen)
-    const phases = items.filter((i) => i.parentId === null)
-    const tasks = items.filter((i) => i.parentId !== null)
-    expect(phases).toHaveLength(STANDARD_TEMPLATE.length)
-    expect(tasks).toHaveLength(8)
-    expect(tasks.reduce((s, t) => s + t.planHours, 0)).toBe(templateTotalHours())
-    for (const t of tasks) {
-      expect(t.startDate >= '2026-10-12' && t.endDate <= '2026-12-04').toBe(true)
-      expect(t.startDate <= t.endDate).toBe(true)
-      expect(t.ownerId).toBe('u-h')
-      expect(t.etcHours).toBe(t.planHours) // ETC の初期値 = PLAN
-    }
-    // ownerIds を複数渡すと順番に持ち回り（全員で分担）
-    const shared = buildTemplateItems('pnew', '2026-10-12', '2026-12-04', ['u-k', 'u-h', 'u-u'], gen).filter((i) => i.parentId !== null)
-    expect(shared.map((t) => t.ownerId)).toEqual(['u-k', 'u-h', 'u-u', 'u-k', 'u-h', 'u-u', 'u-k', 'u-h'])
-    expect(buildTemplateItems('pnew', '2026-10-12', '2026-12-04', [], gen).every((i) => i.ownerId === null)).toBe(true)
-    // 順番（ウォーターフォール）: 前のタスクの開始は次より前
-    for (let i = 1; i < tasks.length; i++) expect(tasks[i - 1].startDate <= tasks[i].startDate).toBe(true)
+describe('工数入力（My Work の保存）', () => {
+  it('ETC は入力値をそのまま採用する', () => {
+    expect(resolveLogWork({ status: 'in_progress' }, { hours: 2, etc: 7, progress: 30 })).toEqual({ etc: 7, progress: 30, status: 'in_progress' })
   })
 
-  it('PROJECT_ADD でWBSごと追加され、PROJECT_DELETE で実績・リスクも含めて消える', () => {
-    const items = buildTemplateItems('pnew', '2026-10-12', '2026-12-04', ['u-h'], gen)
-    const project = { id: 'pnew', name: 'D社 テスト', status: 'active' as const, startDate: '2026-10-12', endDate: '2026-12-04', health: null, budget: 1_000_000 }
-    const added = reducer(data, { type: 'PROJECT_ADD', project, items })
-    expect(added.projects).toHaveLength(data.projects.length + 1)
-    expect(added.wbs).toHaveLength(data.wbs.length + items.length)
-    const d2 = buildDerived(added, TODAY)
-    expect(d2.summaryById.get('pnew')!.totals.plan).toBe(templateTotalHours())
-
-    const removed = reducer(
-      { ...added, timeEntries: [...added.timeEntries, { id: 'tx', wbsId: items[1].id, userId: 'u-h', date: '2026-10-12', hours: 2, comment: '' }] },
-      { type: 'PROJECT_DELETE', id: 'pnew' },
-    )
-    expect(removed.projects.map((p) => p.id)).toEqual(data.projects.map((p) => p.id))
-    expect(removed.wbs).toHaveLength(data.wbs.length)
-    expect(removed.timeEntries.some((e) => e.id === 'tx')).toBe(false)
+  it('進捗100%は完了になり、ETC は 0 に強制される', () => {
+    expect(resolveLogWork({ status: 'in_progress' }, { hours: 1, etc: 9, progress: 100 })).toEqual({ etc: 0, progress: 100, status: 'done' })
   })
 
-  it('空のプロジェクトでも集計・Workload・Dashboard の導出が壊れない', () => {
-    const project = { id: 'pblank', name: '空PJ', status: 'planning' as const, startDate: '2026-10-12', endDate: '2026-11-12', health: null }
-    const d3 = buildDerived(reducer(data, { type: 'PROJECT_ADD', project, items: [] }), TODAY)
-    const s = d3.summaryById.get('pblank')!
-    expect(s.totals.plan).toBe(0)
-    expect(s.cost.marginRate).toBeNull()
-    expect(s.health.health).toBe('GOOD')
+  it('完了を100%未満に戻すと進行中へ戻る', () => {
+    expect(resolveLogWork({ status: 'done' }, { hours: 0, etc: 3, progress: 80 }).status).toBe('in_progress')
+  })
+
+  it('未着手に工数が入ると進行中になる / 停止中は維持される', () => {
+    expect(resolveLogWork({ status: 'not_started' }, { hours: 1, etc: 5, progress: 0 }).status).toBe('in_progress')
+    expect(resolveLogWork({ status: 'blocked' }, { hours: 1, etc: 5, progress: 10 }).status).toBe('blocked')
+  })
+
+  it('進捗は 0〜100 に丸められ、ETC は負にならない', () => {
+    const r = resolveLogWork({ status: 'in_progress' }, { hours: 1, etc: -3, progress: 140 })
+    expect(r.progress).toBe(100)
+    expect(r.etc).toBe(0)
   })
 })

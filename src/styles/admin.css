@@ -1,0 +1,113 @@
+/* ---------- 管理 ---------- */
+.page > .card,
+.page > .card + .card {
+  margin-bottom: 20px;
+}
+
+.admtable__row {
+  display: grid;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 20px;
+  border-bottom: 1px solid var(--border-soft);
+  font-size: 13px;
+}
+
+.admtable__row--head {
+  background: var(--surface-2);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-3);
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.members-cols {
+  grid-template-columns: minmax(140px, 1.2fr) 150px minmax(130px, 1.2fr) 100px 100px 90px 84px;
+}
+
+.skills-cols {
+  grid-template-columns: minmax(120px, 1fr) minmax(90px, 0.7fr) minmax(160px, 2fr) 130px 36px;
+}
+
+.cust-cols {
+  grid-template-columns: minmax(160px, 1fr) minmax(160px, 1fr);
+}
+
+.audit-cols {
+  grid-template-columns: 96px 90px 100px minmax(0, 1fr);
+}
+
+.admtable__name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admtable__calc {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-2);
+}
+
+.admform {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) 150px minmax(0, 1.2fr) 120px auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.admform--inline {
+  grid-template-columns: minmax(200px, 360px) auto;
+}
+
+.admform--grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.admform--pad {
+  padding: 14px 20px;
+}
+
+.chip--role {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px 3px 10px;
+}
+
+.chip--role button {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  line-height: 1;
+  color: var(--text-3);
+}
+
+.chip--role button:hover {
+  background: var(--risk-bg);
+  color: var(--risk);
+}
+
+.wsliders {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.wslider {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 360px) 48px;
+  gap: 12px;
+  align-items: center;
+  font-size: 13px;
+}
+
+.wslider input {
+  accent-color: var(--accent);
+}
+
+.wslider b {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}

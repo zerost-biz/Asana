@@ -1,6 +1,9 @@
 import { Outlet, useParams } from 'react-router-dom'
 import { ProjectDashboard } from '../components/ProjectDashboard'
+import { ProjectCloseView } from '../components/ProjectCloseView'
 import { ProjectHeader } from '../components/ProjectHeader'
+import { ProjectOverview } from '../components/ProjectOverview'
+import { RisksView } from '../components/RisksView'
 import { TaskDrawer } from '../components/TaskDrawer'
 import { TimelineView } from '../components/TimelineView'
 import { WbsTable } from '../components/WbsTable'
@@ -30,6 +33,7 @@ export function ProjectPage() {
           projectId={projectId}
           taskParam={drawer.task}
           parentParam={drawer.parent}
+          newType={drawer.newType}
           onClose={drawer.close}
           onOpen={drawer.open}
         />
@@ -38,7 +42,25 @@ export function ProjectPage() {
   )
 }
 
-/** List タブ */
+/** 概要タブ */
+export function ProjectOverviewView() {
+  const { projectId = '' } = useParams()
+  return <ProjectOverview projectId={projectId} />
+}
+
+/** 完了処理（学び・経験の記録） */
+export function ProjectCloseRoute() {
+  const { projectId = '' } = useParams()
+  return <ProjectCloseView projectId={projectId} />
+}
+
+/** リスクタブ */
+export function ProjectRisksView() {
+  const { projectId = '' } = useParams()
+  return <RisksView projectId={projectId} />
+}
+
+/** 一覧（WBS）タブ */
 export function ProjectListView() {
   const { projectId = '' } = useParams()
   const drawer = useTaskParam()

@@ -1,9 +1,10 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { templateTotalHours } from '../data/templates'
+import { templateTaskCount, templateTotalHours } from '../data/templates'
 import { addDays, isWorkday, toISO } from '../domain/dates'
+import { can, denyReason } from '../domain/permissions'
 import { fmtNum, fmtYen } from '../domain/format'
-import { PROJECT_STATUS_LABEL, type Project, type ProjectStatus } from '../domain/types'
+import { PRIORITY_LABEL, PROJECT_STATUS_LABEL, type Priority, type Project, type ProjectStatus } from '../domain/types'
 import { useApp } from '../store/AppContext'
 import { Avatar } from './Avatar'
 import { cx } from './cx'
@@ -38,10 +39,12 @@ export function useProjectDialog(): Api {
   return ctx
 }
 
-const STATUSES: ProjectStatus[] = ['active', 'planning', 'completed']
+const STATUSES: ProjectStatus[] = ['planned', 'active', 'on_hold', 'completed']
+const PRIORITIES: Priority[] = ['high', 'medium', 'low']
+const NEW_CUSTOMER = '__new__'
 
 function ProjectDialog({ state, onClose }: { state: Exclude<DialogState, null>; onClose: () => void }) {
-  const { data, actions, today } = useApp()
+  const { data, derived, actions, today, me } = useApp()
   const { toast } = useToast()
   const navigate = useNavigate()
   const editing: Project | undefined = state.mode === 'edit' ? data.projects.find((p) => p.id === state.id) : undefined
@@ -53,8 +56,15 @@ function ProjectDialog({ state, onClose }: { state: Exclude<DialogState, null>; 
     while (!isWorkday(d)) d = addDays(d, 1)
     return d
   })()
+  const activeUsers = derived.activeUsers
   const [name, setName] = useState(editing?.name ?? '')
+  const [customerId, setCustomerId] = useState(editing?.customerId ?? data.customers[0]?.id ?? '')
+  const [newCustomer, setNewCustomer] = useState('')
+  const [newIndustry, setNewIndustry] = useState('')
+  const [ownerId, setOwnerId] = useState(editing?.ownerId ?? (activeUsers.some((u) => u.id === me.id) ? me.id : activeUsers[0]?.id ?? ''))
   const [status, setStatus] = useState<ProjectStatus>(editing?.status ?? 'active')
+  const [priority, setPriority] = useState<Priority>(editing?.priority ?? 'medium')
+  const [description, setDescription] = useState(editing?.description ?? '')
   const [start, setStart] = useState(editing?.startDate ?? toISO(firstDay))
   const [end, setEnd] = useState(editing?.endDate ?? toISO(addDays(firstDay, 7 * 8 - 3)))
   const [budget, setBudget] = useState(editing?.budget ? String(editing.budget) : '')
@@ -63,39 +73,55 @@ function ProjectDialog({ state, onClose }: { state: Exclude<DialogState, null>; 
   const [owner, setOwner] = useState<string>('__all__')
   const [confirmDelete, setConfirmDelete] = useState(false)
 
+  const canEdit = isEdit ? can(me, 'project.edit', { project: editing }) : can(me, 'project.create')
+  const canDelete = isEdit && can(me, 'project.delete')
+
   const budgetNum = budget.trim() === '' ? undefined : Number(budget)
   const errors: string[] = []
   if (!name.trim()) errors.push('プロジェクト名を入力してください')
+  if (customerId === NEW_CUSTOMER && !newCustomer.trim()) errors.push('新しい顧客の名前を入力してください')
   if (!start || !end) errors.push('開始日・終了日を入力してください')
   else if (end < start) errors.push('終了日は開始日以降にしてください')
   if (budgetNum !== undefined && (!Number.isFinite(budgetNum) || budgetNum < 0)) errors.push('受注額は 0 以上の数値で入力してください')
 
+  const resolveCustomer = (): string => {
+    if (customerId !== NEW_CUSTOMER) return customerId
+    const id = `c-${Date.now().toString(36)}`
+    actions.upsertCustomer({ id, name: newCustomer.trim(), industry: newIndustry.trim() || '未設定' })
+    return id
+  }
+
   const submit = () => {
-    if (errors.length > 0) return
+    if (errors.length > 0 || !canEdit) return
+    const cid = resolveCustomer()
     if (editing) {
       actions.updateProject(editing.id, {
         name: name.trim(),
+        customerId: cid,
+        ownerId,
         status,
+        priority,
+        description: description.trim(),
         startDate: start,
         endDate: end,
         budget: budgetNum && budgetNum > 0 ? budgetNum : undefined,
       })
-      toast(
-        <>
-          <strong>{name.trim()}</strong> を保存しました
-        </>,
-      )
+      toast(<><strong>{name.trim()}</strong> を保存しました</>)
       onClose()
       return
     }
     const id = actions.addProject({
       name: name.trim(),
+      customerId: cid,
+      ownerId,
       status,
+      priority,
+      description: description.trim(),
       startDate: start,
       endDate: end,
       budget: budgetNum && budgetNum > 0 ? budgetNum : undefined,
       template,
-      ownerIds: template !== 'standard' ? [] : owner === '__all__' ? data.users.map((u) => u.id) : owner ? [owner] : [],
+      ownerIds: template !== 'standard' ? [] : owner === '__all__' ? activeUsers.map((u) => u.id) : owner ? [owner] : [],
     })
     toast(
       <>
@@ -104,11 +130,11 @@ function ProjectDialog({ state, onClose }: { state: Exclude<DialogState, null>; 
       </>,
     )
     onClose()
-    navigate(`/projects/${id}`)
+    navigate(`/projects/${id}/wbs`)
   }
 
   const doDelete = () => {
-    if (!editing) return
+    if (!editing || !canDelete) return
     actions.deleteProject(editing.id)
     toast(<>「{editing.name}」を削除しました</>, 'info')
     onClose()
@@ -122,7 +148,7 @@ function ProjectDialog({ state, onClose }: { state: Exclude<DialogState, null>; 
         <div className="modal" role="alertdialog" aria-label="プロジェクトの削除" onMouseDown={(e) => e.stopPropagation()}>
           <h3 className="modal__title">プロジェクトを削除しますか？</h3>
           <div className="modal__body">
-            「{editing.name}」と、配下の作業項目（{taskCount}件）、作業時間の記録、リスクがすべて削除されます。
+            「{editing.name}」と、配下の作業項目（{taskCount}件）、作業時間の記録、リスク、配置、経験がすべて削除されます。
           </div>
           <div className="modal__foot">
             <button type="button" className="btn btn--ghost" onClick={() => setConfirmDelete(false)}>
@@ -151,12 +177,54 @@ function ProjectDialog({ state, onClose }: { state: Exclude<DialogState, null>; 
         onKeyDown={(e) => e.key === 'Escape' && onClose()}
       >
         <h3 className="modal__title">{isEdit ? 'プロジェクト設定' : 'プロジェクトを追加'}</h3>
+        {!canEdit && (
+          <p className="notice-inline" role="status">
+            {denyReason(isEdit ? 'project.edit' : 'project.create')}
+          </p>
+        )}
 
-        <div className="form modal__form">
+        <fieldset className="form modal__form" disabled={!canEdit}>
           <label className="field" htmlFor="pj-name">
             <span className="field__label">プロジェクト名</span>
             <input id="pj-name" className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="例: D社 需給予測" autoFocus />
           </label>
+
+          <div className="form__row">
+            <label className="field" htmlFor="pj-customer">
+              <span className="field__label">顧客</span>
+              <select id="pj-customer" className="input" value={customerId} onChange={(e) => setCustomerId(e.target.value)}>
+                {data.customers.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}（{c.industry}）
+                  </option>
+                ))}
+                <option value={NEW_CUSTOMER}>＋ 新しい顧客を追加…</option>
+              </select>
+            </label>
+            <label className="field" htmlFor="pj-leader">
+              <span className="field__label">プロジェクトリーダー</span>
+              <select id="pj-leader" className="input" value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
+                {activeUsers.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          {customerId === NEW_CUSTOMER && (
+            <div className="form__row">
+              <label className="field" htmlFor="pj-newcust">
+                <span className="field__label">新しい顧客の名前</span>
+                <input id="pj-newcust" className="input" value={newCustomer} onChange={(e) => setNewCustomer(e.target.value)} placeholder="例: F社" />
+              </label>
+              <label className="field" htmlFor="pj-newind">
+                <span className="field__label">業界</span>
+                <input id="pj-newind" className="input" value={newIndustry} onChange={(e) => setNewIndustry(e.target.value)} placeholder="例: 食品" />
+              </label>
+            </div>
+          )}
 
           <div className="form__row">
             <label className="field" htmlFor="pj-start">
@@ -169,13 +237,23 @@ function ProjectDialog({ state, onClose }: { state: Exclude<DialogState, null>; 
             </label>
           </div>
 
-          <div className="form__row">
+          <div className="form__row form__row--3">
             <label className="field" htmlFor="pj-status">
               <span className="field__label">ステータス</span>
               <select id="pj-status" className="input" value={status} onChange={(e) => setStatus(e.target.value as ProjectStatus)}>
                 {STATUSES.map((s) => (
                   <option key={s} value={s}>
                     {PROJECT_STATUS_LABEL[s]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field" htmlFor="pj-priority">
+              <span className="field__label">優先度</span>
+              <select id="pj-priority" className="input" value={priority} onChange={(e) => setPriority(e.target.value as Priority)}>
+                {PRIORITIES.map((p) => (
+                  <option key={p} value={p}>
+                    {PRIORITY_LABEL[p]}
                   </option>
                 ))}
               </select>
@@ -193,11 +271,16 @@ function ProjectDialog({ state, onClose }: { state: Exclude<DialogState, null>; 
                 onChange={(e) => setBudget(e.target.value)}
                 placeholder="未設定（社内PJ）"
               />
-              <span className="field__help">
-                {budgetNum && Number.isFinite(budgetNum) ? `${fmtYen(budgetNum)}。粗利の計算に使います` : '設定すると 受注額 − 人件費 で粗利を計算します'}
-              </span>
             </label>
           </div>
+          <span className="field__help">
+            {budgetNum && Number.isFinite(budgetNum) ? `${fmtYen(budgetNum)}。粗利の計算に使います` : '受注額を設定すると「受注額 − 人件費」で粗利を計算します'}
+          </span>
+
+          <label className="field" htmlFor="pj-desc">
+            <span className="field__label">概要</span>
+            <textarea id="pj-desc" className="input input--area" rows={2} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="目的・スコープなど" />
+          </label>
 
           {!isEdit && (
             <>
@@ -212,7 +295,9 @@ function ProjectDialog({ state, onClose }: { state: Exclude<DialogState, null>; 
                     onClick={() => setTemplate('standard')}
                   >
                     <strong>標準の作業テンプレート</strong>
-                    <span>現状分析 → To-Be設計 → ロードマップ策定（3フェーズ・8タスク / 計 {fmtNum(templateTotalHours())}h）。期間に合わせて日程を自動配置</span>
+                    <span>
+                      現状分析 → To-Be設計 → ロードマップ策定（3フェーズ・{templateTaskCount()}タスク・マイルストーン3つ / 計 {fmtNum(templateTotalHours())}h）。期間に合わせて日程と先行関係を自動配置
+                    </span>
                   </button>
                   <button
                     type="button"
@@ -231,11 +316,11 @@ function ProjectDialog({ state, onClose }: { state: Exclude<DialogState, null>; 
                 <label className="field" htmlFor="pj-owner">
                   <span className="field__label">テンプレートの担当者</span>
                   <div className="owner-select">
-                    <Avatar user={data.users.find((u) => u.id === owner)} size="sm" />
+                    <Avatar user={activeUsers.find((u) => u.id === owner)} size="sm" />
                     <select id="pj-owner" className="input" value={owner} onChange={(e) => setOwner(e.target.value)}>
                       <option value="__all__">全メンバーで分担（タスクを順番に割り当て）</option>
                       <option value="">未設定（あとで割り当て）</option>
-                      {data.users.map((u) => (
+                      {activeUsers.map((u) => (
                         <option key={u.id} value={u.id}>
                           {u.name}
                         </option>
@@ -255,10 +340,10 @@ function ProjectDialog({ state, onClose }: { state: Exclude<DialogState, null>; 
               ))}
             </ul>
           )}
-        </div>
+        </fieldset>
 
         <div className="modal__foot modal__foot--split">
-          {isEdit ? (
+          {isEdit && canDelete ? (
             <button type="button" className="btn btn--quiet" onClick={() => setConfirmDelete(true)}>
               プロジェクトを削除
             </button>
@@ -269,7 +354,7 @@ function ProjectDialog({ state, onClose }: { state: Exclude<DialogState, null>; 
             <button type="button" className="btn btn--ghost" onClick={onClose}>
               キャンセル
             </button>
-            <button type="submit" className="btn btn--primary" disabled={errors.length > 0}>
+            <button type="submit" className="btn btn--primary" disabled={errors.length > 0 || !canEdit}>
               {isEdit ? '保存' : '追加'}
             </button>
           </div>

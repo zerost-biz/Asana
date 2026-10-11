@@ -1,10 +1,10 @@
-import { ArrowRight, Check, Lock, Minus, Plus, TriangleAlert } from 'lucide-react'
+import { ArrowRight, Check, CircleCheck, Lock, Minus, Plus, TriangleAlert } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { leafMetrics, resolveLogWork } from '../domain/calculations'
 import { daysBetween, fmtMD } from '../domain/dates'
-import { clamp, fmtNum, fmtSignedH, roundHalf } from '../domain/format'
-import type { WbsItem } from '../domain/types'
+import { clamp, fmtNum, fmtSignedH, roundStep } from '../domain/format'
+import { PRIORITY_LABEL, type WbsItem } from '../domain/types'
 import { useApp } from '../store/AppContext'
 import { ProgressBar } from './ProgressBar'
 import { WbsStatusBadge } from './StatusBadge'
@@ -31,7 +31,7 @@ export function WorkCard({ item, result, onSaved }: Props) {
   const { toast } = useToast()
   const m = derived.metrics.get(item.id)!
   const project = derived.projectById.get(item.projectId)
-  const overdue = item.status !== 'Done' && item.endDate < todayISO
+  const overdue = item.status !== 'done' && item.endDate < todayISO
 
   const [hours, setHours] = useState(0)
   const [etc, setEtc] = useState(String(item.etcHours))
@@ -45,7 +45,8 @@ export function WorkCard({ item, result, onSaved }: Props) {
   const changed = hours > 0 || comment.trim() !== '' || (etcValid && etcNum !== item.etcHours) || progress !== item.progress
   const completes = progress >= 100
 
-  const setH = (v: number) => setHours(clamp(roundHalf(v), 0, 24))
+  const step = data.settings.hoursStep
+  const setH = (v: number) => setHours(clamp(roundStep(v, step), 0, 24))
 
   const save = () => {
     if (!changed || !etcValid) return
@@ -81,25 +82,26 @@ export function WorkCard({ item, result, onSaved }: Props) {
   const fh = (n: number) => `${fmtNum(n)}h`
 
   return (
-    <article className={cx('wc', item.status === 'Blocked' && 'wc--blocked', item.status === 'Done' && 'wc--done')}>
+    <article className={cx('wc', item.status === 'blocked' && 'wc--blocked', item.status === 'done' && 'wc--done')}>
       <header className="wc__head">
         <div className="wc__meta">
           <span className="chip chip--project">{project?.name}</span>
           <WbsStatusBadge status={item.status} />
+          {item.priority === 'high' && <span className="chip">優先度 {PRIORITY_LABEL[item.priority]}</span>}
           {overdue && (
             <span className="chip chip--warn">
               <TriangleAlert size={11} strokeWidth={2.4} />
               遅延 {daysBetween(item.endDate, todayISO)}日
             </span>
           )}
-          {item.status === 'Blocked' && (
+          {item.status === 'blocked' && (
             <span className="chip chip--warn">
               <Lock size={11} strokeWidth={2.4} />
               停止中
             </span>
           )}
         </div>
-        <Link to={`/projects/${item.projectId}?task=${item.id}`} className="link-btn wc__open">
+        <Link to={`/projects/${item.projectId}/wbs?task=${item.id}`} className="link-btn wc__open">
           作業一覧で開く
         </Link>
       </header>
@@ -140,21 +142,21 @@ export function WorkCard({ item, result, onSaved }: Props) {
         <div className="wc__field">
           <span className="wc__label">今日の工数</span>
           <div className="stepper">
-            <button type="button" onClick={() => setH(hours - 0.5)} aria-label="0.5h減らす" disabled={hours <= 0}>
+            <button type="button" onClick={() => setH(hours - step)} aria-label={`${step}h減らす`} disabled={hours <= 0}>
               <Minus size={16} />
             </button>
             <input
               type="number"
               min={0}
               max={24}
-              step={0.5}
+              step={step}
               inputMode="decimal"
               value={hours}
               onChange={(e) => setH(Number(e.target.value))}
               aria-label="今日の工数(h)"
             />
             <span className="stepper__unit">h</span>
-            <button type="button" onClick={() => setH(hours + 0.5)} aria-label="0.5h増やす">
+            <button type="button" onClick={() => setH(hours + step)} aria-label={`${step}h増やす`}>
               <Plus size={16} />
             </button>
           </div>
@@ -245,6 +247,16 @@ export function WorkCard({ item, result, onSaved }: Props) {
       )}
 
       <footer className="wc__foot">
+        <button
+          type="button"
+          className="btn btn--ghost"
+          onClick={() => setProgress(100)}
+          disabled={completes || item.status === 'done'}
+          title="進捗を100%にします（完了になり、残りは0hになります）"
+        >
+          <CircleCheck size={15} />
+          完了にする
+        </button>
         <button type="button" className="btn btn--primary" onClick={save} disabled={!changed || !etcValid}>
           保存
         </button>

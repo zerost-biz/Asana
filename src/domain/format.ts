@@ -57,3 +57,6 @@ export const clamp = (n: number, min: number, max: number): number => Math.min(m
 
 /** 0.5h刻みへ丸める */
 export const roundHalf = (n: number): number => Math.round(n * 2) / 2
+
+/** 刻み(0.25 / 0.5 など)へ丸める */
+export const roundStep = (n: number, step: number): number => (step > 0 ? Math.round(n / step) * step : n)

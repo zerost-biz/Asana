@@ -49,7 +49,7 @@ const GROUPS: { title: string; terms: Term[] }[] = [
     title: '状態',
     terms: [
       { word: '順調 / 注意 / 危険', desc: 'プロジェクトの状態。時間の超過・遅延・停止中・重大なリスクから自動で判定します。' },
-      { word: '停止中', alias: 'Blocked', desc: '何かの待ちなどで、進められなくなっている作業。' },
+      { word: '停止中', alias: 'blocked', desc: '何かの待ちなどで、進められなくなっている作業。' },
       { word: '遅延', desc: '終了日を過ぎても、まだ完了していない作業。' },
       { word: '作業項目', alias: 'WBS', desc: 'プロジェクトの作業を、フェーズ → タスクの順に細かく分けた一覧。' },
     ],

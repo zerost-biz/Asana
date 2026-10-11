@@ -1,4 +1,4 @@
-import { CalendarClock, Gauge, Info, Layers, Users } from 'lucide-react'
+import { CalendarClock, Compass, Gauge, Info, Layers, Pencil, Users } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Card } from '../components/Card'
@@ -8,7 +8,8 @@ import { KpiCard } from '../components/KpiCard'
 import { PageHeader } from '../components/PageHeader'
 import { useProjectDialog } from '../components/ProjectDialogHost'
 import { ProjectHealthTable } from '../components/ProjectHealthTable'
-import { RecentWins } from '../components/RecentWins'
+import { GrowthFeed, RecentWins } from '../components/RecentWins'
+import { Upcoming } from '../components/Upcoming'
 import { useToast } from '../components/Toast'
 import { WorkloadOutlook } from '../components/WorkloadOutlook'
 import { fmtFull, parseDate, weekStartOf } from '../domain/dates'
@@ -20,6 +21,8 @@ export function DashboardPage() {
   const { toast } = useToast()
   const { openCreate } = useProjectDialog()
   const [confirmReset, setConfirmReset] = useState(false)
+  const [editMission, setEditMission] = useState<string | null>(null)
+  const { can } = useApp()
   const { summaries, workload, overloadUsers, decisions, weekActualHours } = derived
 
   const active = summaries.filter((s) => s.project.status === 'active')
@@ -33,7 +36,7 @@ export function DashboardPage() {
   return (
     <div className="page">
       <PageHeader
-        title="チームのダッシュボード"
+        title="ホーム"
         sub={`${fmtFull(today)}  ·  今週は ${workload.weeks[0].range}`}
       />
 
@@ -48,6 +51,52 @@ export function DashboardPage() {
           </button>
         </div>
       )}
+
+      <div className="mission" aria-label="今週の重点テーマ">
+        <span className="mission__icon">
+          <Compass size={20} />
+        </span>
+        <div className="mission__body">
+          <div className="mission__label">今週の重点テーマ</div>
+          {editMission === null ? (
+            <p className={data.settings.mission ? 'mission__text' : 'mission__text mission__text--empty'}>
+              {data.settings.mission || '重点テーマが未設定です。チームで今週いちばん大事にすることを書きましょう。'}
+            </p>
+          ) : (
+            <div className="mission__edit">
+              <textarea
+                className="input input--area"
+                rows={2}
+                value={editMission}
+                onChange={(e) => setEditMission(e.target.value)}
+                aria-label="今週の重点テーマ"
+                autoFocus
+              />
+              <div className="card__actions">
+                <button type="button" className="btn btn--ghost btn--sm" onClick={() => setEditMission(null)}>
+                  キャンセル
+                </button>
+                <button
+                  type="button"
+                  className="btn btn--primary btn--sm"
+                  onClick={() => {
+                    actions.updateSettings({ mission: editMission.trim() })
+                    setEditMission(null)
+                    toast('重点テーマを更新しました')
+                  }}
+                >
+                  保存
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+        {editMission === null && can('mission.edit') && (
+          <button type="button" className="icon-btn" aria-label="重点テーマを編集" title="編集" onClick={() => setEditMission(data.settings.mission)}>
+            <Pencil size={16} />
+          </button>
+        )}
+      </div>
 
       <div className="kpi-grid">
         <KpiCard
@@ -108,7 +157,7 @@ export function DashboardPage() {
 
           <Card
             title="稼働の見通し"
-            subtitle="予定時間 ÷ 稼働可能時間（週40時間）。セルをクリックで内訳を表示"
+            subtitle="予定時間 ÷ 稼働可能時間。見込み込みにすると受注見込みの案件も含めて見られます。セルをクリックで内訳を表示"
             action={<Link to="/workload" className="link-btn">稼働状況を開く</Link>}
           >
             <WorkloadOutlook />
@@ -125,8 +174,16 @@ export function DashboardPage() {
             <DecisionList />
           </Card>
 
-          <Card title="最近の成果" subtitle="（ダミーデータ）">
+          <Card title="次の期限" subtitle="マイルストーン・PJ化判断・終了予定（向こう30日）">
+            <Upcoming />
+          </Card>
+
+          <Card title="最近の成果" subtitle="達成したマイルストーン・プロジェクト化・完了">
             <RecentWins />
+          </Card>
+
+          <Card title="成長" subtitle="新しい経験・スキルの変化。クリックでメンバーのプロフィールへ">
+            <GrowthFeed />
           </Card>
         </div>
       </div>

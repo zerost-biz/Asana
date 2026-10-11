@@ -55,4 +55,22 @@ export const fmtMDDate = (d: Date): string => format(d, 'M/d')
 export const fmtMDW = (iso: ISODate): string => format(parseISO(iso), 'M/d(E)', { locale: ja })
 export const fmtFull = (d: Date): string => format(d, 'yyyy年M月d日(E)', { locale: ja })
 
+/** startISO〜endISO にかかる週の月曜日(ISO)の一覧（最大 maxWeeks 週） */
+export function weekStartsBetween(startISO: ISODate, endISO: ISODate, maxWeeks = 52): ISODate[] {
+  const out: ISODate[] = []
+  let cur = weekStartOf(parseISO(startISO))
+  const end = parseISO(endISO)
+  while (cur <= end && out.length < maxWeeks) {
+    out.push(toISO(cur))
+    cur = addDays(cur, 7)
+  }
+  return out
+}
+
+/** 2026-10-08T09:30:00.000Z 形式の日時を 10/8 09:30 に */
+export const fmtDateTime = (iso: string): string => {
+  const d = new Date(iso)
+  return Number.isNaN(d.getTime()) ? iso : format(d, 'M/d HH:mm')
+}
+
 export { addDays, differenceInCalendarDays }

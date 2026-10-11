@@ -31,9 +31,9 @@ export function ProjectDashboard({ projectId }: { projectId: string }) {
     .map((item) => {
       const m = metrics.get(item.id) as Metrics
       const why: string[] = []
-      if (item.status === 'Blocked') why.push('停止中')
+      if (item.status === 'blocked') why.push('停止中')
       if (isOverdue(item.status, item.endDate, todayISO)) why.push(`遅延 ${daysBetween(item.endDate, todayISO)}日`)
-      if (item.status !== 'Done' && m.variance >= 4) why.push(`見込み ${fmtSignedH(m.variance)}`)
+      if (item.status !== 'done' && m.variance >= 4) why.push(`見込み ${fmtSignedH(m.variance)}`)
       return { item, m, why }
     })
     .filter((x) => x.why.length > 0)
@@ -60,7 +60,7 @@ export function ProjectDashboard({ projectId }: { projectId: string }) {
       r.actCost += e.hours * derived.rateOf(e.userId)
     }
     for (const l of leaves) {
-      if (l.status === 'Done' && l.etcHours === 0) continue
+      if (l.status === 'done' && l.etcHours === 0) continue
       const r = get(l.ownerId)
       r.etcH += l.etcHours
       r.etcCost += l.etcHours * derived.rateOf(l.ownerId)
@@ -274,7 +274,7 @@ export function ProjectDashboard({ projectId }: { projectId: string }) {
             <ul className="watch">
               {watchList.map(({ item, m, why }) => (
                 <li key={item.id}>
-                  <button type="button" onClick={() => navigate(`/projects/${projectId}?task=${item.id}`)}>
+                  <button type="button" onClick={() => navigate(`/projects/${projectId}/wbs?task=${item.id}`)}>
                     <Avatar user={item.ownerId ? derived.userById.get(item.ownerId) : null} size="sm" />
                     <span className="watch__title">
                       <strong>

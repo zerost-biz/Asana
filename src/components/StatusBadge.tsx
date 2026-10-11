@@ -14,16 +14,16 @@ export function HealthBadge({ health, size = 'md', title }: { health: Health; si
 }
 
 const STATUS_CLASS: Record<WbsStatus, string> = {
-  'Not started': 'todo',
-  'In progress': 'wip',
-  Blocked: 'blocked',
-  Done: 'done',
+  'not_started': 'todo',
+  'in_progress': 'wip',
+  blocked: 'blocked',
+  done: 'done',
 }
 
 export function WbsStatusBadge({ status }: { status: WbsStatus }) {
   return (
     <span className={cx('badge', 'badge--status', `badge--${STATUS_CLASS[status]}`)}>
-      {status === 'Blocked' && <Lock size={11} strokeWidth={2.4} />}
+      {status === 'blocked' && <Lock size={11} strokeWidth={2.4} />}
       {WBS_STATUS_LABEL[status]}
     </span>
   )

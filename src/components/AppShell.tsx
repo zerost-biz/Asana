@@ -1,7 +1,7 @@
 import { Info } from 'lucide-react'
 import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
-import { isStorageAvailable } from '../store/persistence'
+import { isStorageAvailable } from '../repository'
 import { Sidebar } from './Sidebar'
 import { Topbar } from './Topbar'
 import { ProjectDialogProvider } from './ProjectDialogHost'

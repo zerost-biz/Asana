@@ -1,23 +1,27 @@
-import { Settings2 } from 'lucide-react'
+import { Flag, Settings2 } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { fmtMD } from '../domain/dates'
+import { PROJECT_STATUS_LABEL } from '../domain/types'
+import { useApp } from '../store/AppContext'
 import { fmtNum, fmtPct, fmtSignedH, fmtYenShort } from '../domain/format'
 import type { ProjectSummary } from '../store/derived'
-import { GlossaryButton } from './GlossaryDialog'
 import { useProjectDialog } from './ProjectDialogHost'
 import { HealthBadge } from './StatusBadge'
 import { cx } from './cx'
 
 const TABS = [
-  { to: '', label: '一覧', end: true },
+  { to: '', label: '概要', end: true },
+  { to: 'wbs', label: '一覧', end: false },
   { to: 'timeline', label: 'タイムライン', end: false },
   { to: 'dashboard', label: 'ダッシュボード', end: false },
   { to: 'workload', label: '稼働状況', end: false },
+  { to: 'risks', label: 'リスク', end: false },
 ]
 
 export function ProjectHeader({ summary }: { summary: ProjectSummary }) {
   const { project, totals, health, cost } = summary
   const { openEdit } = useProjectDialog()
+  const { can } = useApp()
   const base = `/projects/${project.id}`
   const over = totals.variance > 0
 
@@ -28,7 +32,7 @@ export function ProjectHeader({ summary }: { summary: ProjectSummary }) {
           <h1>{project.name}</h1>
           <HealthBadge health={health.health} title={health.reasons.join(' / ') || '問題なし'} />
           <span className="phead__period">
-            {fmtMD(project.startDate)} – {fmtMD(project.endDate)}
+            {PROJECT_STATUS_LABEL[project.status]} · {fmtMD(project.startDate)} – {fmtMD(project.endDate)}
           </span>
           <button type="button" className="icon-btn icon-btn--sm" onClick={() => openEdit(project.id)} title="プロジェクト設定（名称・期間・受注額・削除）" aria-label="プロジェクト設定">
             <Settings2 size={16} />
@@ -72,7 +76,12 @@ export function ProjectHeader({ summary }: { summary: ProjectSummary }) {
             </div>
           )}
         </dl>
-        <GlossaryButton variant="icon" />
+        {can('close.edit', { project }) && project.status !== 'archived' && (
+          <NavLink to={`${base}/close`} className="btn btn--ghost btn--sm" title="プロジェクトの完了処理（学び・経験の記録）">
+            <Flag size={14} />
+            完了処理
+          </NavLink>
+        )}
       </div>
 
       <div className="tabs" role="tablist">

@@ -3,10 +3,12 @@ import type {
   ISODate,
   Project,
   Risk,
+  Settings,
   TimeEntry,
   WbsItem,
   WbsStatus,
 } from './types'
+import { DEFAULT_SETTINGS } from './types'
 
 /* ------------------------------------------------------------------ */
 /* WBS 階層インデックス                                                 */
@@ -138,14 +140,17 @@ export function leafMetrics(plan: number, act: number, etc: number): Pick<
 }
 
 function rollupStatus(children: Metrics[]): WbsStatus {
-  if (children.length > 0 && children.every((c) => c.status === 'Done')) return 'Done'
-  if (children.some((c) => c.status === 'Blocked')) return 'Blocked'
-  if (children.some((c) => c.status === 'In progress' || c.status === 'Done')) return 'In progress'
-  return 'Not started'
+  if (children.length > 0 && children.every((c) => c.status === 'done')) return 'done'
+  if (children.some((c) => c.status === 'blocked')) return 'blocked'
+  if (children.some((c) => c.status === 'in_progress' || c.status === 'done')) return 'in_progress'
+  return 'not_started'
 }
 
 /** 子の集計（親行・プロジェクト全体で共通） */
-function aggregate(children: Metrics[]): Omit<Metrics, 'startDate' | 'endDate' | 'status' | 'isParent'> {
+function aggregate(
+  children: Metrics[],
+  weight: Settings['parentProgressWeight'] = 'plan',
+): Omit<Metrics, 'startDate' | 'endDate' | 'status' | 'isParent'> {
   let plan = 0
   let act = 0
   let etc = 0
@@ -154,6 +159,7 @@ function aggregate(children: Metrics[]): Omit<Metrics, 'startDate' | 'endDate' |
   let etcCost = 0
   let leafCount = 0
   let weighted = 0
+  let weightSum = 0
   let simple = 0
   for (const c of children) {
     plan += c.plan
@@ -163,11 +169,14 @@ function aggregate(children: Metrics[]): Omit<Metrics, 'startDate' | 'endDate' |
     actCost += c.actCost
     etcCost += c.etcCost
     leafCount += c.leafCount
-    weighted += c.progress * c.plan
+    // 進捗の加重: 計画時間（既定）または見込み時間。マイルストーン(時間0)は重みを持たない
+    const w = weight === 'eac' ? c.eac : c.plan
+    weighted += c.progress * w
+    weightSum += w
     simple += c.progress * c.leafCount
   }
   const eac = act + etc
-  const progress = plan > 0 ? weighted / plan : leafCount > 0 ? simple / leafCount : 0
+  const progress = weightSum > 0 ? weighted / weightSum : leafCount > 0 ? simple / leafCount : 0
   const eacCost = actCost + etcCost
   return {
     plan,
@@ -190,6 +199,7 @@ export function computeAllMetrics(
   items: WbsItem[],
   entries: TimeEntry[],
   rateOf: RateOf = () => 0,
+  parentProgressWeight: Settings['parentProgressWeight'] = 'plan',
 ): MetricsMap {
   const idx = indexWbs(items)
   const act = sumActByWbs(entries)
@@ -219,12 +229,13 @@ export function computeAllMetrics(
         endDate: it.endDate,
         status: it.status,
         isParent: false,
-        leafCount: 1,
+        // マイルストーンは進捗の平均に含めない
+        leafCount: it.type === 'milestone' ? 0 : 1,
       }
     } else {
       guard.add(it.id)
       const cm = kids.map((k) => calc(k, guard))
-      const agg = aggregate(cm)
+      const agg = aggregate(cm, parentProgressWeight)
       m = {
         ...agg,
         startDate: cm.reduce((s, c) => (c.startDate < s ? c.startDate : s), cm[0].startDate),
@@ -245,11 +256,12 @@ export function projectMetrics(
   projectId: string,
   idx: WbsIndex,
   metrics: MetricsMap,
+  parentProgressWeight: Settings['parentProgressWeight'] = 'plan',
 ): Omit<Metrics, 'startDate' | 'endDate' | 'status' | 'isParent'> {
   const tops = (idx.topOf.get(projectId) ?? [])
     .map((t) => metrics.get(t.id))
     .filter((m): m is Metrics => !!m)
-  return aggregate(tops)
+  return aggregate(tops, parentProgressWeight)
 }
 
 /* ------------------------------------------------------------------ */
@@ -257,7 +269,7 @@ export function projectMetrics(
 /* ------------------------------------------------------------------ */
 
 export const isOverdue = (status: WbsStatus, endDate: ISODate, todayISO: ISODate): boolean =>
-  status !== 'Done' && endDate < todayISO
+  status !== 'done' && endDate < todayISO
 
 export interface HealthInfo {
   /** 表示するHealth（手動上書きがあればそれ） */
@@ -284,24 +296,25 @@ export function computeProjectHealth(
   leafMs: Metrics[],
   risks: Risk[],
   todayISO: ISODate,
+  settings: Pick<Settings, 'riskVarianceRatio' | 'watchVarianceRatio'> = DEFAULT_SETTINGS,
 ): HealthInfo {
   const overdueCount = leafMs.filter((m) => isOverdue(m.status, m.endDate, todayISO)).length
-  const blockedCount = leafMs.filter((m) => m.status === 'Blocked').length
+  const blockedCount = leafMs.filter((m) => m.status === 'blocked').length
   const varianceRatio = pm.plan > 0 ? pm.variance / pm.plan : 0
   const highOpen = risks.some(
     (r) => r.projectId === project.id && r.severity === 'high' && r.status !== 'closed',
   )
 
   const reasons: string[] = []
-  if (pm.variance > 0 && varianceRatio >= 0.05)
+  if (pm.variance > 0 && varianceRatio >= settings.watchVarianceRatio)
     reasons.push(`見込み +${Math.round(pm.variance * 10) / 10}時間超過 (${Math.round(varianceRatio * 100)}%)`)
   if (overdueCount > 0) reasons.push(`遅延タスク ${overdueCount}件`)
   if (blockedCount > 0) reasons.push(`停止中 ${blockedCount}件`)
   if (highOpen) reasons.push('重大リスクあり')
 
   let auto: Health = 'GOOD'
-  if (varianceRatio >= 0.15 || (blockedCount > 0 && overdueCount > 0)) auto = 'RISK'
-  else if (varianceRatio >= 0.05 || blockedCount > 0 || overdueCount > 0 || highOpen) auto = 'WATCH'
+  if (varianceRatio >= settings.riskVarianceRatio || (blockedCount > 0 && overdueCount > 0)) auto = 'RISK'
+  else if (varianceRatio >= settings.watchVarianceRatio || blockedCount > 0 || overdueCount > 0 || highOpen) auto = 'WATCH'
 
   const health = project.health ?? auto
   return {
@@ -346,12 +359,12 @@ export function resolveLogWork(
   let etc = Math.max(0, input.etc)
   let status = item.status
   if (progress >= 100) {
-    status = 'Done'
+    status = 'done'
     etc = 0
-  } else if (status === 'Done') {
-    status = 'In progress'
-  } else if (status === 'Not started' && (input.hours > 0 || progress > 0)) {
-    status = 'In progress'
+  } else if (status === 'done') {
+    status = 'in_progress'
+  } else if (status === 'not_started' && (input.hours > 0 || progress > 0)) {
+    status = 'in_progress'
   }
   return { etc, progress, status }
 }

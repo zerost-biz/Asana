@@ -1,11 +1,17 @@
 import { ChevronRight, CircleCheck, Clock, Coins, Flag, Gauge, Lock, TrendingUp } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { Decision, DecisionKind } from '../domain/decisions'
+import type { Alert, AlertKind } from '../domain/alerts'
 import { useApp } from '../store/AppContext'
 import { cx } from './cx'
 
-const ICON: Record<DecisionKind, typeof Gauge> = {
+const ICON: Record<AlertKind, typeof Gauge> = {
+  forecast_overload: Gauge,
+  deadline: Clock,
+  etc_stale: Clock,
+  pj_decision: Flag,
+  assignment_gap: Flag,
+  dependency: Clock,
   overload: Gauge,
   eac: TrendingUp,
   margin: Coins,
@@ -21,7 +27,7 @@ export function DecisionList() {
   const { derived } = useApp()
   const navigate = useNavigate()
   const [all, setAll] = useState(false)
-  const list: Decision[] = derived.decisions
+  const list: Alert[] = derived.decisions
   const shown = all ? list : list.slice(0, LIMIT)
 
   if (list.length === 0) {
