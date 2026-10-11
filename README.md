@@ -47,7 +47,7 @@
 | Icons / Date | lucide-react / date-fns |
 | State | React Context + `useReducer` |
 | 保存 | `Repository` インターフェース ＋ `LocalStorageRepository`（本番は `GasRepository` に差し替え） |
-| Test | Vitest（ユニット 151 件）＋ Playwright の E2E スクリプト（167 チェック） |
+| Test | Vitest（ユニット 157 件）＋ Playwright の E2E スクリプト（167 チェック） |
 
 ## インストール・起動
 
@@ -274,6 +274,10 @@ e2e/             Playwright の画面操作テスト（p0 / p1）
 
 UI → ドメイン計算 → **Repository インターフェース** → LocalStorage（将来 GAS）の順で依存します。全画面が `store/derived.ts` の**同じ導出データ**を参照するので、入力が変わると数字が全画面で揃って更新されます。
 
+## 自分のGoogleで試す（トライアル）
+
+`gas/` に、Google Apps Script + スプレッドシートで動かすための一式があります（`Code.gs` / `index.html` / `appsscript.json`）。手順は **[gas/README.md](gas/README.md)**。Apps Script 上で開くと自動で `GasRepository`（スプレッドシート保存）に切り替わり、レポートのCSVはGoogleドライブに保存されます。自分1人用のトライアルで、複数人の同時編集・本物の権限確認は含みません。
+
 ## 将来 GAS（Google Apps Script + Google Sheets）へ移植する際のポイント
 
 **そのまま持っていけるもの**: `src/domain/*`（DOM・React 非依存の純粋な TypeScript）。UI は Vite でビルドした成果物を GAS の HTML Service に載せる想定です（`build:single` で単一HTML化）。
@@ -303,12 +307,12 @@ UI → ドメイン計算 → **Repository インターフェース** → LocalS
 
 ## テスト
 
-- `npm test` … ユニット 151 件: 計算（EAC・親集計・人件費・Health・工数入力）/ 稼働（配分・手修正・Capacity・Committed/Expected・未配置）/ 案件評価 / 適合度 / 権限 / 通知 / reducer（工数連動・PJ化・配置・完了→経験→スキル・設定・社内オーダー）/ 締め期間（15日・末日・2月・年またぎ）/ CSV（BOM・CRLF・引用・式の無害化）/ オーダー別の集計 / seed の受入基準・曜日依存なし / 保存・復元・旧データの移行・Reset。
+- `npm test` … ユニット 157 件: 計算（EAC・親集計・人件費・Health・工数入力）/ 稼働（配分・手修正・Capacity・Committed/Expected・未配置）/ 案件評価 / 適合度 / 権限 / 通知 / reducer（工数連動・PJ化・配置・完了→経験→スキル・設定・社内オーダー）/ 締め期間（15日・末日・2月・年またぎ）/ CSV（BOM・CRLF・引用・式の無害化）/ オーダー別の集計 / seed の受入基準・曜日依存なし / 保存・復元・旧データの移行・Reset。
 - `npm run e2e` … 実ブラウザで全画面の描画、社内オーダーの登録・計上・CSVのダウンロード内容（15日締め・末締め）、ホーム・WBS・ドロワー・タイムライン・稼働・自分の作業・リスク・週次レビュー・受注見込み（ドラッグ含む）・PJ化・配置・メンバー・スキルマップ・完了処理・管理・Reset・権限・保存と復元を確認（コンソールエラー 0）。
 
 ## 仮定と未実装（プロトタイプの範囲）
 
-- 実装しない: GAS / Google Sheets 連携、本物の認証、メール・チャット通知、外部API、会計・請求・外注費などの本格的な原価管理、AI機能。
+- 実装しない: 本格的な GAS / Google Sheets 連携（トライアル版は `gas/`）、本物の認証、メール・チャット通知、外部API、会計・請求・外注費などの本格的な原価管理、AI機能。
 - 権限は画面側のロール切替（ログインなし）。ユーザーの追加は管理でできるが、削除はなし（「停止」にする）。
 - タイムラインはバーのドラッグ編集なし（日付はドロワーで変更）。依存関係は矢印の簡易表示。
 - 稼働は週次のみ・祝日は考慮しない（平日＝稼働日）。ETC の配分は均等配分の近似（週別に手修正可）。

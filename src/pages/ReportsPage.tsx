@@ -95,8 +95,15 @@ export function ReportsPage() {
     const f = csv(which)
     if (f.rows <= 0 && !total) return toast('この期間に出力するデータがありません', 'info')
     const r = await saveTextFile(f.name, f.text)
-    if (r === 'saved') toast(<><strong>{f.name}</strong> を出力しました（{f.rows}行）</>)
-    else if (r === 'failed') toast('この表示環境ではダウンロードできません。「コピー」から表計算ソフトへ貼り付けてください', 'info')
+    if (r.outcome === 'saved') {
+      toast(
+        r.drive ? (
+          <><strong>{f.name}</strong> をGoogleドライブに保存しました（{f.rows}行）。<a href={r.drive} target="_blank" rel="noreferrer">開く</a></>
+        ) : (
+          <><strong>{f.name}</strong> を出力しました（{f.rows}行）</>
+        ),
+      )
+    } else if (r.outcome === 'failed') toast('この表示環境ではダウンロードできません。「コピー」から表計算ソフトへ貼り付けてください', 'info')
   }
   const copy = async () => {
     const f = csv(view)

@@ -23,7 +23,7 @@ export function migrate(raw: unknown): unknown {
   return raw
 }
 
-function isValid(d: unknown): d is AppData {
+export function isValid(d: unknown): d is AppData {
   if (!d || typeof d !== 'object') return false
   const o = d as Record<string, unknown>
   if (!COLLECTIONS.every((k) => isArr(o[k]))) return false

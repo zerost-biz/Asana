@@ -450,8 +450,8 @@ function DataTab() {
   const [confirm, setConfirm] = useState(false)
   const exportJson = async () => {
     const r = await saveTextFile(`project-delivery-os-${data.seededOn}.json`, JSON.stringify(data, null, 2), 'application/json')
-    if (r === 'saved') toast('データをJSONで書き出しました')
-    else if (r === 'failed') toast('この表示環境では書き出しできません', 'info')
+    if (r.outcome === 'saved') toast(r.drive ? 'データをJSONでGoogleドライブに保存しました' : 'データをJSONで書き出しました')
+    else if (r.outcome === 'failed') toast('この表示環境では書き出しできません', 'info')
   }
   const counts: [string, number][] = [
     ['プロジェクト', data.projects.length],
