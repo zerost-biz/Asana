@@ -1,10 +1,12 @@
-import { FolderKanban, Gauge, House, UserCheck } from 'lucide-react'
+import { FolderKanban, Gauge, House, Plus, UserCheck } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { useApp } from '../store/AppContext'
+import { useProjectDialog } from './ProjectDialogHost'
 import { cx } from './cx'
 
 export function Sidebar() {
   const { derived } = useApp()
+  const { openCreate } = useProjectDialog()
   const link = ({ isActive }: { isActive: boolean }) => cx('nav__item', isActive && 'is-active')
 
   return (
@@ -15,10 +17,15 @@ export function Sidebar() {
           <span>Home</span>
         </NavLink>
 
-        <NavLink to="/projects" end className={link}>
-          <FolderKanban size={18} />
-          <span>Projects</span>
-        </NavLink>
+        <div className="nav__row">
+          <NavLink to="/projects" end className={link}>
+            <FolderKanban size={18} />
+            <span>Projects</span>
+          </NavLink>
+          <button type="button" className="nav__add" onClick={openCreate} title="プロジェクトを追加" aria-label="プロジェクトを追加">
+            <Plus size={16} />
+          </button>
+        </div>
         <div className="nav__sub">
           {derived.summaries.map((s) => (
             <NavLink

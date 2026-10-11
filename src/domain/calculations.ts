@@ -93,6 +93,16 @@ export interface Metrics {
   burn: number | null
   /** 0〜100。親は最下位タスクの PLAN 加重平均 */
   progress: number
+  /** 人件費（原価）: PLAN = 計画工数 × 担当者の単価 */
+  planCost: number
+  /** ACT 原価 = Σ（TimeEntry の工数 × 入力者の単価） */
+  actCost: number
+  /** ETC 原価 = 残工数 × 担当者の単価 */
+  etcCost: number
+  /** EAC 原価 = ACT 原価 + ETC 原価 */
+  eacCost: number
+  /** 原価の差異 = EAC 原価 - PLAN 原価 */
+  varianceCost: number
   startDate: ISODate
   endDate: ISODate
   status: WbsStatus
@@ -102,9 +112,19 @@ export interface Metrics {
 
 export type MetricsMap = Map<string, Metrics>
 
+/** 担当者(未設定は null)の原価単価（円/時間） */
+export type RateOf = (userId: string | null) => number
+
 export function sumActByWbs(entries: TimeEntry[]): Map<string, number> {
   const m = new Map<string, number>()
   for (const e of entries) m.set(e.wbsId, (m.get(e.wbsId) ?? 0) + e.hours)
+  return m
+}
+
+/** wbsId ごとの ACT 原価。実績は「入力した人」の単価で計上する */
+export function sumActCostByWbs(entries: TimeEntry[], rateOf: RateOf): Map<string, number> {
+  const m = new Map<string, number>()
+  for (const e of entries) m.set(e.wbsId, (m.get(e.wbsId) ?? 0) + e.hours * rateOf(e.userId))
   return m
 }
 
@@ -129,6 +149,9 @@ function aggregate(children: Metrics[]): Omit<Metrics, 'startDate' | 'endDate' |
   let plan = 0
   let act = 0
   let etc = 0
+  let planCost = 0
+  let actCost = 0
+  let etcCost = 0
   let leafCount = 0
   let weighted = 0
   let simple = 0
@@ -136,18 +159,41 @@ function aggregate(children: Metrics[]): Omit<Metrics, 'startDate' | 'endDate' |
     plan += c.plan
     act += c.act
     etc += c.etc
+    planCost += c.planCost
+    actCost += c.actCost
+    etcCost += c.etcCost
     leafCount += c.leafCount
     weighted += c.progress * c.plan
     simple += c.progress * c.leafCount
   }
   const eac = act + etc
   const progress = plan > 0 ? weighted / plan : leafCount > 0 ? simple / leafCount : 0
-  return { plan, act, etc, eac, variance: eac - plan, burn: plan > 0 ? act / plan : null, progress, leafCount }
+  const eacCost = actCost + etcCost
+  return {
+    plan,
+    act,
+    etc,
+    eac,
+    variance: eac - plan,
+    burn: plan > 0 ? act / plan : null,
+    progress,
+    planCost,
+    actCost,
+    etcCost,
+    eacCost,
+    varianceCost: eacCost - planCost,
+    leafCount,
+  }
 }
 
-export function computeAllMetrics(items: WbsItem[], entries: TimeEntry[]): MetricsMap {
+export function computeAllMetrics(
+  items: WbsItem[],
+  entries: TimeEntry[],
+  rateOf: RateOf = () => 0,
+): MetricsMap {
   const idx = indexWbs(items)
   const act = sumActByWbs(entries)
+  const actCost = sumActCostByWbs(entries, rateOf)
   const out: MetricsMap = new Map()
 
   const calc = (it: WbsItem, guard: Set<string>): Metrics => {
@@ -157,8 +203,17 @@ export function computeAllMetrics(items: WbsItem[], entries: TimeEntry[]): Metri
     let m: Metrics
     if (!kids || kids.length === 0 || guard.has(it.id)) {
       const a = act.get(it.id) ?? 0
+      const rate = rateOf(it.ownerId)
+      const ac = actCost.get(it.id) ?? 0
+      const pc = it.planHours * rate
+      const ec = it.etcHours * rate
       m = {
         ...leafMetrics(it.planHours, a, it.etcHours),
+        planCost: pc,
+        actCost: ac,
+        etcCost: ec,
+        eacCost: ac + ec,
+        varianceCost: ac + ec - pc,
         progress: it.progress,
         startDate: it.startDate,
         endDate: it.endDate,

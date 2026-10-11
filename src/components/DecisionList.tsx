@@ -1,4 +1,4 @@
-import { ChevronRight, CircleCheck, Clock, Flag, Gauge, Lock, TrendingUp } from 'lucide-react'
+import { ChevronRight, CircleCheck, Clock, Coins, Flag, Gauge, Lock, TrendingUp } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Decision, DecisionKind } from '../domain/decisions'
@@ -8,6 +8,7 @@ import { cx } from './cx'
 const ICON: Record<DecisionKind, typeof Gauge> = {
   overload: Gauge,
   eac: TrendingUp,
+  margin: Coins,
   risk: Flag,
   overdue: Clock,
   blocked: Lock,

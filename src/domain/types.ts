@@ -7,6 +7,8 @@ export interface User {
   initials: string
   /** 週あたりの稼働可能時間 (h) */
   weeklyCapacity: number
+  /** 原価単価（円/時間）。人件費 = 工数(h) × 単価。1人日 = 8h として人日単価に換算できる */
+  hourlyRate: number
 }
 
 export type ProjectStatus = 'active' | 'planning' | 'completed'
@@ -23,6 +25,8 @@ export interface Project {
    * （EAC差異・遅延・Blocked・リスクから calculations.computeHealth が算出）
    */
   health: Health | null
+  /** 受注額・予算（円）。未設定なら粗利は計算しない（社内PJなど） */
+  budget?: number
 }
 
 export type WbsStatus = 'Not started' | 'In progress' | 'Blocked' | 'Done'
@@ -84,6 +88,12 @@ export interface AppData {
 }
 
 export const WBS_STATUSES: WbsStatus[] = ['Not started', 'In progress', 'Blocked', 'Done']
+
+export const PROJECT_STATUS_LABEL: Record<ProjectStatus, string> = {
+  active: '進行中',
+  planning: '計画中',
+  completed: '完了',
+}
 
 export const WBS_STATUS_LABEL: Record<WbsStatus, string> = {
   'Not started': '未着手',

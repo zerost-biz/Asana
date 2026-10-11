@@ -22,12 +22,23 @@ import {
   type WorkloadMatrix,
 } from '../domain/workload'
 
+export interface ProjectCost {
+  /** 受注額・予算（円）。未設定は null */
+  budget: number | null
+  /** 計画時点の粗利 = 受注額 - PLAN原価 */
+  planMargin: number | null
+  /** 見込み粗利 = 受注額 - EAC原価 */
+  margin: number | null
+  marginRate: number | null
+}
+
 export interface ProjectSummary {
   project: Project
   /** "B社 MES構想" -> "B社" */
   shortName: string
   totals: ReturnType<typeof projectMetrics>
   health: HealthInfo
+  cost: ProjectCost
   overdue: { id: string; title: string; days: number }[]
   blocked: { id: string; title: string }[]
   openRisks: Risk[]
@@ -40,6 +51,10 @@ export interface Derived {
   metrics: MetricsMap
   numbers: Map<string, string>
   userById: Map<string, User>
+  /** 担当者の原価単価（未設定・不明は全員の平均） */
+  rateOf: (userId: string | null) => number
+  /** 担当者未設定のときに使う平均単価 */
+  defaultRate: number
   projectById: Map<string, Project>
   leaves: WbsItem[]
   weeks: WeekInfo[]
@@ -59,9 +74,12 @@ export const shortProjectName = (p: Project): string => p.name.split(/\s+/)[0]
 export function buildDerived(data: AppData, today: Date): Derived {
   const todayISO = toISO(today)
   const idx = indexWbs(data.wbs)
-  const metrics = computeAllMetrics(data.wbs, data.timeEntries)
-  const numbers = wbsNumbering(idx, data.projects)
   const userById = new Map(data.users.map((u) => [u.id, u]))
+  const defaultRate =
+    data.users.length > 0 ? data.users.reduce((s, u) => s + u.hourlyRate, 0) / data.users.length : 0
+  const rateOf = (userId: string | null): number => (userId && userById.get(userId)?.hourlyRate) || defaultRate
+  const metrics = computeAllMetrics(data.wbs, data.timeEntries, rateOf)
+  const numbers = wbsNumbering(idx, data.projects)
   const projectById = new Map(data.projects.map((p) => [p.id, p]))
   const leaves = leafItems(data.wbs, idx)
   const weeks = buildWeeks(today)
@@ -77,11 +95,19 @@ export function buildDerived(data: AppData, today: Date): Derived {
       .filter((l) => isOverdue(l.status, l.endDate, todayISO))
       .map((l) => ({ id: l.id, title: l.title, days: daysBetween(l.endDate, todayISO) }))
     const blocked = pLeaves.filter((l) => l.status === 'Blocked').map((l) => ({ id: l.id, title: l.title }))
+    const budget = project.budget && project.budget > 0 ? project.budget : null
+    const cost: ProjectCost = {
+      budget,
+      planMargin: budget === null ? null : budget - totals.planCost,
+      margin: budget === null ? null : budget - totals.eacCost,
+      marginRate: budget === null ? null : (budget - totals.eacCost) / budget,
+    }
     return {
       project,
       shortName: shortProjectName(project),
       totals,
       health,
+      cost,
       overdue,
       blocked,
       openRisks: data.risks.filter((r) => r.projectId === project.id && r.status !== 'closed'),
@@ -96,6 +122,10 @@ export function buildDerived(data: AppData, today: Date): Derived {
       health: s.health,
       variance: s.totals.variance,
       plan: s.totals.plan,
+      cost:
+        s.cost.budget !== null && s.cost.margin !== null && s.cost.marginRate !== null
+          ? { budget: s.cost.budget, eacCost: s.totals.eacCost, margin: s.cost.margin, marginRate: s.cost.marginRate }
+          : null,
       overdue: s.overdue,
       blocked: s.blocked,
     })),
@@ -117,6 +147,8 @@ export function buildDerived(data: AppData, today: Date): Derived {
     metrics,
     numbers,
     userById,
+    rateOf,
+    defaultRate,
     projectById,
     leaves,
     weeks,

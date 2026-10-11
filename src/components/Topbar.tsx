@@ -1,9 +1,10 @@
-import { ChevronRight, RotateCcw, Settings } from 'lucide-react'
+import { ChevronRight, RotateCcw, Settings, Users } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useMatch } from 'react-router-dom'
 import { useApp } from '../store/AppContext'
 import { Avatar } from './Avatar'
 import { ConfirmDialog } from './ConfirmDialog'
+import { MembersDialog } from './MembersDialog'
 import { Popover } from './Popover'
 import { SearchBox } from './SearchBox'
 import { useToast } from './Toast'
@@ -16,6 +17,7 @@ export function Topbar() {
   const project = match?.params.projectId ? derived.projectById.get(match.params.projectId) : undefined
   const me = derived.userById.get(data.currentUserId)
   const [confirmReset, setConfirmReset] = useState(false)
+  const [members, setMembers] = useState(false)
 
   return (
     <header className="topbar">
@@ -52,6 +54,17 @@ export function Topbar() {
           {(close) => (
             <div className="menu">
               <div className="menu__title">設定</div>
+              <button
+                type="button"
+                className="menu__item"
+                onClick={() => {
+                  close()
+                  setMembers(true)
+                }}
+              >
+                <Users size={16} />
+                メンバーと単価
+              </button>
               <button
                 type="button"
                 className="menu__item"
@@ -100,6 +113,8 @@ export function Topbar() {
           )}
         </Popover>
       </div>
+
+      {members && <MembersDialog onClose={() => setMembers(false)} />}
 
       {confirmReset && (
         <ConfirmDialog

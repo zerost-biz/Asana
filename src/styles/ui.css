@@ -541,3 +541,128 @@
   background: rgba(255, 255, 255, 0.7);
   font-size: 12px;
 }
+
+.card__actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ---------- Modal: フォーム ---------- */
+.modal--wide {
+  width: min(600px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+}
+
+.modal__lead {
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-2);
+}
+
+.modal__form {
+  margin-top: 16px;
+}
+
+.modal__foot--split {
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.choice {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-strong);
+  background: #fff;
+  text-align: left;
+  transition: border-color 0.12s, box-shadow 0.12s, background 0.12s;
+}
+
+.choice:hover {
+  border-color: #c5cad8;
+}
+
+.choice.is-on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 3px var(--accent-soft-2);
+}
+
+.choice strong {
+  font-size: 13px;
+}
+
+.choice span {
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--text-2);
+}
+
+/* ---------- メンバー / 単価の表 ---------- */
+.members {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+}
+
+.members__row {
+  display: grid;
+  grid-template-columns: minmax(110px, 1.2fr) 1fr 1.2fr 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--border-soft);
+  font-size: 13px;
+}
+
+.members__row--head {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.members__name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+}
+
+.members__day {
+  color: var(--text-2);
+}
+
+.members .input {
+  height: 34px;
+}
+
+.members--cost {
+  margin-top: 18px;
+}
+
+.members--cost .members__row {
+  grid-template-columns: minmax(110px, 1.3fr) repeat(6, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.members--cost .num {
+  font-variant-numeric: tabular-nums;
+}

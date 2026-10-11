@@ -1,6 +1,6 @@
 import { ChevronRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { fmtNum, fmtSignedH } from '../domain/format'
+import { fmtNum, fmtSignedH, fmtYenShort } from '../domain/format'
 import { useApp } from '../store/AppContext'
 import { ProgressBar } from './ProgressBar'
 import { HealthBadge } from './StatusBadge'
@@ -44,8 +44,9 @@ export function ProjectHealthTable() {
             </div>
             <div role="cell" className={cx('ph__var', over && 'is-over')}>
               <b>{fmtSignedH(totals.variance)}</b>
-              <span className="ph__small">
-                EAC {fmtNum(totals.eac)}h
+              <span className="ph__small">EAC {fmtNum(totals.eac)}h</span>
+              <span className={cx('ph__small', s.cost.marginRate !== null && s.cost.marginRate < 0.1 && 'ph__small--warn')}>
+                {s.cost.marginRate !== null ? `粗利 ${Math.round(s.cost.marginRate * 100)}%` : `原価 ${fmtYenShort(totals.eacCost)}`}
               </span>
             </div>
             <div role="cell">

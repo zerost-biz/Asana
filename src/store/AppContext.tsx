@@ -9,13 +9,29 @@ import {
   type ReactNode,
 } from 'react'
 import { createSeed } from '../data/seed'
+import { buildTemplateItems } from '../data/templates'
 import { getToday, toISO } from '../domain/dates'
 import type { AppData, Project, Risk, User, WbsItem } from '../domain/types'
 import { buildDerived, type Derived } from './derived'
 import { clearData, loadData, saveData, STORAGE_KEY } from './persistence'
 import { newId, reducer, type LogWorkPayload } from './reducer'
 
+export interface NewProjectInput {
+  name: string
+  status: Project['status']
+  startDate: string
+  endDate: string
+  budget?: number
+  /** 'standard' なら標準WBSテンプレートから作成、'blank' なら空のプロジェクト */
+  template: 'blank' | 'standard'
+  /** テンプレートのタスクに順番に割り当てる担当者（空なら未設定） */
+  ownerIds: string[]
+}
+
 export interface AppActions {
+  /** プロジェクトを追加し、その id を返す */
+  addProject: (input: NewProjectInput) => string
+  deleteProject: (id: string) => void
   addWbs: (item: Omit<WbsItem, 'id'>) => string
   updateWbs: (id: string, patch: Partial<Omit<WbsItem, 'id' | 'projectId'>>) => void
   deleteWbs: (id: string) => void
@@ -80,8 +96,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return id
   }, [])
 
+  const addProject = useCallback((input: NewProjectInput) => {
+    const id = newId('p')
+    const project: Project = {
+      id,
+      name: input.name,
+      status: input.status,
+      startDate: input.startDate,
+      endDate: input.endDate,
+      health: null,
+      budget: input.budget,
+    }
+    const items =
+      input.template === 'standard'
+        ? buildTemplateItems(id, input.startDate, input.endDate, input.ownerIds, newId)
+        : []
+    dispatch({ type: 'PROJECT_ADD', project, items })
+    return id
+  }, [])
+
   const actions = useMemo<AppActions>(
     () => ({
+      addProject,
+      deleteProject: (id) => dispatch({ type: 'PROJECT_DELETE', id }),
       addWbs,
       updateWbs: (id, patch) => dispatch({ type: 'WBS_UPDATE', id, patch }),
       deleteWbs: (id) => dispatch({ type: 'WBS_DELETE', id }),
@@ -97,7 +134,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setToday(getToday())
       },
     }),
-    [addWbs],
+    [addWbs, addProject],
   )
 
   const value = useMemo(() => ({ data, today, derived, actions }), [data, today, derived, actions])

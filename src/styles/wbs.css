@@ -311,3 +311,36 @@ button.chev:hover {
     display: none;
   }
 }
+
+.wbs__toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* 工数(h) / コスト(円) の切替 */
+.unit-toggle {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 9px;
+  background: var(--surface-3);
+}
+
+.unit-toggle button {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.unit-toggle button:hover {
+  color: var(--text);
+}
+
+.unit-toggle button.is-on {
+  background: #fff;
+  color: var(--accent-strong);
+  box-shadow: var(--shadow-sm), 0 0 0 1px var(--border);
+}

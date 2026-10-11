@@ -4,6 +4,7 @@ import { Outlet } from 'react-router-dom'
 import { isStorageAvailable } from '../store/persistence'
 import { Sidebar } from './Sidebar'
 import { Topbar } from './Topbar'
+import { ProjectDialogProvider } from './ProjectDialogHost'
 import { ToastProvider } from './Toast'
 
 export function AppShell() {
@@ -11,6 +12,7 @@ export function AppShell() {
   const [volatile] = useState(() => !isStorageAvailable())
   return (
     <ToastProvider>
+      <ProjectDialogProvider>
       <div className="app">
         <Topbar />
         <div className="app__body">
@@ -26,6 +28,7 @@ export function AppShell() {
           </main>
         </div>
       </div>
+      </ProjectDialogProvider>
     </ToastProvider>
   )
 }

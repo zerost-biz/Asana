@@ -1,7 +1,7 @@
 import type { AppData } from '../domain/types'
 
 /** データ構造を変えたら v を上げる（古い保存データは破棄して seed から再開） */
-export const STORAGE_KEY = 'project-delivery-os:v1'
+export const STORAGE_KEY = 'project-delivery-os:v2'
 
 const isArr = (v: unknown): v is unknown[] => Array.isArray(v)
 
@@ -15,7 +15,9 @@ function isValid(d: unknown): d is AppData {
     isArr(o.timeEntries) &&
     isArr(o.risks) &&
     typeof o.currentUserId === 'string' &&
-    o.users.length > 0
+    o.users.length > 0 &&
+    // v2: ユーザーに原価単価が入っていること（古い形式のデータは破棄して seed から再開）
+    o.users.every((u) => typeof (u as { hourlyRate?: unknown }).hourlyRate === 'number')
   )
 }
 

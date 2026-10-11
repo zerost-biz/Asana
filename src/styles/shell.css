@@ -508,3 +508,43 @@
 .project__body.has-drawer {
   padding-right: calc(var(--drawer-w) + 24px);
 }
+
+/* ---------- Sidebar: プロジェクト追加ボタン ---------- */
+.nav__row {
+  position: relative;
+}
+
+.nav__row .nav__item {
+  padding-right: 40px;
+}
+
+.nav__add {
+  position: absolute;
+  right: 6px;
+  top: 6px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  color: var(--text-3);
+}
+
+.nav__add:hover {
+  background: var(--accent-soft-2);
+  color: var(--accent-strong);
+}
+
+.phead__stats-sep {
+  width: 1px;
+  margin: 6px 8px;
+  background: var(--border);
+}
+
+.phead__stats > .phead__stats-sep {
+  min-width: 0;
+  width: 1px;
+  padding: 0;
+  margin: 8px 10px;
+  background: var(--border);
+}

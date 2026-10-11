@@ -2,7 +2,7 @@ import { Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { addDays, fmtMD, toISO } from '../domain/dates'
 import { descendantsOf, leafMetrics } from '../domain/calculations'
-import { clamp, fmtNum, fmtPct, fmtSignedH } from '../domain/format'
+import { clamp, fmtNum, fmtPct, fmtSignedH, fmtSignedYenShort, fmtYen, fmtYenShort } from '../domain/format'
 import { WBS_STATUSES, WBS_STATUS_LABEL, type WbsItem, type WbsStatus } from '../domain/types'
 import { useApp } from '../store/AppContext'
 import { Avatar } from './Avatar'
@@ -256,6 +256,21 @@ function TaskForm({
     : live
   const progressShown = showM ? showM.progress : draft.progress
 
+  // 人件費（原価）: PLAN/ETC は担当者の単価（ライブ）、ACT は実績を入力した人の単価で確定済みの値
+  const rate = derived.rateOf(draft.ownerId || null)
+  const planN = Number.isFinite(plan) ? plan : 0
+  const etcN = Number.isFinite(etc) ? etc : 0
+  const actCostNow = itemMetrics && !isParent ? itemMetrics.actCost : 0
+  const costView = showM
+    ? { plan: showM.planCost, act: showM.actCost, etc: showM.etcCost, eac: showM.eacCost, variance: showM.varianceCost }
+    : {
+        plan: planN * rate,
+        act: actCostNow,
+        etc: etcN * rate,
+        eac: actCostNow + etcN * rate,
+        variance: actCostNow + etcN * rate - planN * rate,
+      }
+
   return (
     <>
       <Drawer
@@ -311,6 +326,29 @@ function TaskForm({
                 <b>{Math.round(progressShown)}%</b>
               </div>
               <ProgressBar value={progressShown} tone="good" />
+            </div>
+          </div>
+          <div className="costline" aria-label="人件費（原価）">
+            <div className="costline__head">
+              <span>人件費（原価・万円）</span>
+              <em>{isParent ? 'フェーズ合計' : `${owner?.name ?? '担当未設定（平均単価）'}  ${fmtYen(rate)}/h`}</em>
+            </div>
+            <div className="costline__grid">
+              <span title={fmtYen(costView.plan)}>
+                PLAN <b>{fmtYenShort(costView.plan)}</b>
+              </span>
+              <span title={fmtYen(costView.act)}>
+                ACT <b>{fmtYenShort(costView.act)}</b>
+              </span>
+              <span title={fmtYen(costView.etc)}>
+                ETC <b>{fmtYenShort(costView.etc)}</b>
+              </span>
+              <span title={fmtYen(costView.eac)}>
+                EAC <b>{fmtYenShort(costView.eac)}</b>
+              </span>
+              <span className={costView.variance > 0 ? 'is-over' : undefined} title={fmtYen(costView.variance)}>
+                差異 <b>{fmtSignedYenShort(costView.variance)}</b>
+              </span>
             </div>
           </div>
           {isParent && <p className="hint">フェーズの PLAN / ACT / ETC / EAC / 進捗は、配下タスクから自動集計されます。</p>}

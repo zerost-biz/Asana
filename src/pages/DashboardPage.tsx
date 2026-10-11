@@ -6,6 +6,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog'
 import { DecisionList } from '../components/DecisionList'
 import { KpiCard } from '../components/KpiCard'
 import { PageHeader } from '../components/PageHeader'
+import { useProjectDialog } from '../components/ProjectDialogHost'
 import { ProjectHealthTable } from '../components/ProjectHealthTable'
 import { RecentWins } from '../components/RecentWins'
 import { useToast } from '../components/Toast'
@@ -17,6 +18,7 @@ import { useApp } from '../store/AppContext'
 export function DashboardPage() {
   const { data, derived, today, actions } = useApp()
   const { toast } = useToast()
+  const { openCreate } = useProjectDialog()
   const [confirmReset, setConfirmReset] = useState(false)
   const { summaries, workload, overloadUsers, decisions, weekActualHours } = derived
 
@@ -89,7 +91,16 @@ export function DashboardPage() {
           <Card
             title="Project Health"
             subtitle="進捗・工数消化・EAC差異から自動判定。行をクリックでプロジェクトへ"
-            action={<Link to="/projects" className="link-btn">すべて見る</Link>}
+            action={
+              <div className="card__actions">
+                <button type="button" className="link-btn" onClick={openCreate}>
+                  ＋ プロジェクトを追加
+                </button>
+                <Link to="/projects" className="link-btn">
+                  すべて見る
+                </Link>
+              </div>
+            }
             flush
           >
             <ProjectHealthTable />

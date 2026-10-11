@@ -16,6 +16,8 @@ WBS → 計画工数(PLAN) → 実績工数(ACT) → 残工数(ETC) → EAC → 
 | ![My Work](docs/screenshots/05-my-work.png) | ![Workload](docs/screenshots/04-workload.png) |
 | **Timeline** | **プロジェクト Dashboard タブ** |
 | ![Timeline](docs/screenshots/03-timeline.png) | ![Project Dashboard](docs/screenshots/06-project-dashboard.png) |
+| **WBS（コスト表示）** | **プロジェクトの追加** |
+| ![WBS cost](docs/screenshots/07-wbs-cost.png) | ![Project dialog](docs/screenshots/08-project-dialog.png) |
 
 ## 技術構成
 
@@ -63,16 +65,24 @@ npm test           # ロジックのユニットテスト
 | 画面 | Route | 内容 |
 | --- | --- | --- |
 | Dashboard | `/` | KPI 4枚 / Project Health / Workload Outlook / Decision Required / Recent Wins |
-| Projects | `/projects` | プロジェクト一覧（Health 付き） |
+| Projects | `/projects` | プロジェクト一覧（Health 付き）。**「プロジェクトを追加」**ボタン |
 | Project: List | `/projects/:id` | **WBS 一覧**。階層・折りたたみ・親の自動集計・右ドロワーで編集・Add Task |
 | Project: Timeline | `/projects/:id/timeline` | 同じ WBS を週単位の日付軸で表示。今日線・遅延/Blocked の区別 |
-| Project: Dashboard | `/projects/:id/dashboard` | PJ 単位の工数サマリー・フェーズ別 PLAN/ACT/EAC・Health 根拠・リスク |
+| Project: Dashboard | `/projects/:id/dashboard` | PJ 単位の工数サマリー・**人件費（原価）と粗利**・メンバー別コスト・フェーズ別 PLAN/ACT/EAC・Health 根拠・リスク |
 | Project: Workload | `/projects/:id/workload` | このPJの担当者の、全PJ合算の負荷（本PJ分を併記） |
 | My Work | `/my-work` | 担当タスクのカードに **今日の工数 / ETC / 進捗 / コメント** を入力して保存 |
 | Workload | `/workload` | 人 × 週（今週〜+3週）の負荷率。セルクリックで内訳ドロワー |
 
 共通: 左サイドバー（Home / Projects / My Work / Workload）、上部バー（検索・設定・ユーザー）。
 タスクのドロワーは URL（`?task=<id>`）で開閉するので、List / Timeline / Dashboard の判断カードなど、どこからでも同じドロワーが開きます。
+
+## プロジェクトを追加・編集・削除する
+
+- **追加**: 左サイドバー「Projects」横の **＋**、Projects 画面の「プロジェクトを追加」、Dashboard の「＋ プロジェクトを追加」のどれからでも。
+  - 入力: プロジェクト名 / 開始日・終了日 / ステータス / 受注額・予算（任意）/ WBS の初期構成
+  - **標準WBSテンプレート**: 現状分析 → To-Be設計 → ロードマップ策定（3フェーズ・8タスク・計196h）。期間の営業日に PLAN 工数の比率で日程を自動配置し、担当者は「全メンバーで分担（順番に割り当て）」「特定の1人」「未設定」から選べます（ETC の初期値 = PLAN）。
+  - **空のプロジェクト**: 作成後に List の「タスクを追加」でWBSを作ります。
+- **編集・削除**: プロジェクト画面ヘッダーの **⚙（プロジェクト設定）**で、名称・期間・ステータス・受注額の変更とプロジェクトの削除（配下のWBS・実績・リスクも削除）。
 
 ### 触って確認できる主なループ
 
@@ -87,6 +97,26 @@ npm test           # ロジックのユニットテスト
    List 側の開始/終了日の変更が Timeline のバー位置に反映
 4. **完了処理**
    進捗 100% / 状態「完了」にすると ETC は 0h になり、その分が Workload から外れる
+
+## 人件費（原価）と粗利
+
+「人工」＝工数に単価を掛けた**人件費**を、工数と同じ流れで計算します。
+
+| 値 | 定義 |
+| --- | --- |
+| 原価単価 | メンバーごとの円/時間（初期: K 8,000 / H 7,000 / U 6,000 / S 5,000）。右上の **⚙ → 「メンバーと単価」** で変更。人日単価（×8h）も併記 |
+| PLAN 原価 | 計画工数 × **担当者**の単価 |
+| ACT 原価 | Σ（実績工数 × **入力した人**の単価） |
+| ETC 原価 | 残工数 × **担当者**の単価 |
+| EAC 原価 | ACT 原価 + ETC 原価 |
+| 原価差異 | EAC 原価 − PLAN 原価 |
+| 見込み粗利 / 粗利率 | 受注額 − EAC 原価 / 見込み粗利 ÷ 受注額（受注額が未設定のPJは計算しない） |
+
+- 担当者が未設定のタスクは、全メンバーの平均単価で計算します。
+- **WBS の表**は右上の「工数 (h) / コスト (円)」で数値列を切り替え（コストは万円表記）。タスクのドロワーでも、PLAN/ETC を変えると原価がライブで再計算されます。
+- **プロジェクトの Dashboard タブ**に、受注額・原価・粗利の内訳バーと、メンバー別の人件費（人日換算つき）があります。ヘッダーにも「原価EAC」「粗利率」を表示します。
+- 粗利率が目安の **10%** を下回ると、Dashboard の Decision Required に出ます（赤字は重要扱い）。
+- 実績の単価は「現在の単価」で再計算されます（単価の履歴は持ちません）。実装は `src/domain/calculations.ts`。
 
 ## 工数・指標の定義
 
@@ -137,8 +167,8 @@ npm test           # ロジックのユニットテスト
 | --- | --- | --- |
 | B社 MES構想 | WATCH | EAC超過見込み。WBS 3フェーズ。**主サンプル**（`As-Is整理` = PLAN 36h / ACT 24h / ETC 16h → EAC 40h / 差異 +4h） |
 | A社 SaaS導入 | GOOD | 進捗が工数消化より先行 |
-| C社 Smart保全 | RISK | 遅延・EAC超過・Blocked |
-| 新商材GTM | GOOD | 小規模 |
+| C社 SCADA | RISK | 遅延・EAC超過・Blocked・粗利が薄い（約4%） |
+| 新商材GTM | GOOD | 小規模・社内PJ（受注額なし） |
 
 ユーザーは K / H / U / S の4名（初期の My Work ユーザーは H）。
 Workload は 60〜120% 超まで散らばるよう調整済みです（例: K = 93 / 118 / 123 / 85%）。
@@ -149,17 +179,17 @@ Workload は 60〜120% 超まで散らばるよう調整済みです（例: K = 
 
 ## データ保存方法
 
-- 変更は **即座に `localStorage`**（キー: `project-delivery-os:v1`）へ保存されます。
-  対象: WBS 変更 / PLAN / ETC / 進捗 / 日付 / 担当者 / TimeEntry / 新規・削除タスク / Health 上書き / 稼働時間 など。
+- 変更は **即座に `localStorage`**（キー: `project-delivery-os:v2`）へ保存されます。
+  対象: プロジェクトの追加・編集・削除 / WBS 変更 / PLAN / ETC / 進捗 / 日付 / 担当者 / TimeEntry / 新規・削除タスク / Health 上書き / 稼働時間・原価単価 / 受注額 など。
 - リロードしても状態は維持されます。別タブでの変更も `storage` イベントで同期します。
-- データ構造を変えた場合はキーのバージョン（`v1`）を上げると、古い保存データを破棄して seed から再開します。
+- データ構造を変えた場合はキーのバージョン（`v2`）を上げると、古い保存データを破棄して seed から再開します（v1 → v2 で原価単価・受注額を追加したため、以前の保存データは初期化されます）。
 - ブラウザの開発者ツール → Application → Local Storage で中身を確認・削除できます。
 - seed を作った週と違う週に開くと、Dashboard 上部に「今週に合わせて初期化」の案内が出ます。
 
 ## Reset Demo Data（デモデータの初期化）
 
 右上の **⚙ 設定 → 「デモデータを初期化」**（確認ダイアログあり）。
-`localStorage` を消去して seed データへ戻し、基準日も今週に更新します。
+`localStorage` を消去して seed データへ戻し（追加したプロジェクト・変更した単価も元に戻ります）、基準日も今週に更新します。
 
 ## ディレクトリ構成
 
@@ -167,12 +197,13 @@ Workload は 60〜120% 超まで散らばるよう調整済みです（例: K = 
 src/
   domain/          画面に依存しない純粋なロジック（← GAS 移植時もそのまま使える）
     types.ts         User / Project / WbsItem / TimeEntry / Risk
-    calculations.ts  ACT・ETC・EAC・Variance・親集計・Health・工数入力の解決
+    calculations.ts  ACT・ETC・EAC・Variance・人件費(原価)・親集計・Health・工数入力の解決
     workload.ts      週バケット・ETC の均等配分・負荷率
     decisions.ts     Decision Required の導出
     dates.ts / format.ts
     calculations.test.ts
   data/seed.ts     初期ダミーデータ（週基準で生成）
+  data/templates.ts  標準WBSテンプレート（プロジェクト追加時に日程を自動配置）
   store/
     AppContext.tsx   状態 + アクション + 導出データの提供
     reducer.ts       状態遷移（WBS更新 / LOG_WORK など）
@@ -213,24 +244,25 @@ src/
 
 | シート | 列 |
 | --- | --- |
-| `Users` | id, name, initials, weeklyCapacity |
-| `Projects` | id, name, status, startDate, endDate, health |
+| `Users` | id, name, initials, weeklyCapacity, hourlyRate |
+| `Projects` | id, name, status, startDate, endDate, health, budget |
 | `WBS` | id, projectId, parentId, title, ownerId, startDate, endDate, planHours, etcHours, progress, status, comment |
 | `TimeEntries` | id, wbsId, userId, date, hours, comment（**追記専用**にすると ACT の監査性が高い） |
 | `Risks` | id, projectId, wbsId, severity, title, status |
 
 **設計上の注意**
 
-- ACT は `TimeEntries` の集計で導出し、WBS シートに保存しない（二重管理を避ける）。
+- ACT は `TimeEntries` の集計で導出し、WBS シートに保存しない（二重管理を避ける）。人件費も同様に、保存せず 工数 × 単価 で毎回導出する。単価の履歴が必要になったら `Rates`（userId, 適用開始日, 単価）シートを追加し、TimeEntry の日付で単価を引く。
 - 同時編集は `LockService` で保護し、`updatedAt` / 版番号での競合検知を検討。
 - `google.script.run` は遅いので、「起動時に一括取得 → 画面ではメモリ上のデータで計算 → 保存は debounce」にする。
 - 親行の集計・Workload・Health は保存せず、毎回導出する現在の方針のまま移植する。
 
 ## 仮定と未実装（プロトタイプの範囲）
 
-- 実装しない: GAS / Google Sheets 連携、認証・権限、メール通知、外部API、依存関係のドラッグ編集、会計・原価計算、AI機能。
+- 実装しない: GAS / Google Sheets 連携、認証・権限、メール通知、外部API、依存関係のドラッグ編集、会計システム連携・請求・外注費などの本格的な原価管理（人件費の簡易計算のみ）、AI機能。
 - Timeline はバーのドラッグ編集なし（日付は List のドロワーで変更）。表示は日単位の幅で、週ヘッダー付き。
 - Workload は週次のみ。ETC の配分は均等配分の近似（週別に手入力は不可）。
 - WBS の並び順は配列順（ドラッグ並べ替えなし）。階層は「フェーズ → タスク」を想定（子は何階層でも集計されるが、追加 UI は最上位/フェーズ直下）。
 - 祝日・個人の休暇は考慮しない（平日 = 稼働日）。
 - 検索はプロジェクト名・タスク名の部分一致のみ。
+- 単価は「現在の単価」で全期間を再計算（単価の履歴・期間別単価なし）。外注費・経費・間接費は対象外。メンバーの追加・削除 UI はなし（単価・稼働のみ編集可）。

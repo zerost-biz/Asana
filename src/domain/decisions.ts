@@ -1,9 +1,12 @@
 import type { Project, Risk } from './types'
 import type { HealthInfo } from './calculations'
 import type { WorkloadMatrix } from './workload'
-import { fmtSignedH } from './format'
+import { fmtSignedH, fmtSignedYen, fmtYen } from './format'
 
-export type DecisionKind = 'overload' | 'eac' | 'risk' | 'overdue' | 'blocked'
+export type DecisionKind = 'overload' | 'eac' | 'margin' | 'risk' | 'overdue' | 'blocked'
+
+/** 粗利率がこれを下回ると「要判断」に出す（プロトタイプの目安） */
+export const MARGIN_TARGET = 0.1
 /** red は「重大リスク・100%超負荷」に限定するため、severity は 2 段階で表す */
 export type DecisionTone = 'critical' | 'attention'
 
@@ -22,6 +25,8 @@ export interface ProjectDecisionInput {
   health: HealthInfo
   variance: number
   plan: number
+  /** 受注額・EAC原価・粗利率（受注額が未設定なら null） */
+  cost: { budget: number; eacCost: number; margin: number; marginRate: number } | null
   /** 遅延している最下位タスク（先頭を遷移先にする） */
   overdue: { id: string; title: string; days: number }[]
   blocked: { id: string; title: string }[]
@@ -76,6 +81,17 @@ export function buildDecisions(
         title: `${name} EAC ${fmtSignedH(p.variance)}`,
         detail: `PLANを${Math.round(p.health.varianceRatio * 100)}%超過する見込み。スコープ/体制の見直しを判断`,
         to: `/projects/${p.project.id}`,
+      })
+    }
+    if (p.cost && p.cost.marginRate < MARGIN_TARGET) {
+      const c = p.cost
+      out.push({
+        id: `margin:${p.project.id}`,
+        kind: 'margin',
+        tone: c.marginRate < 0 ? 'critical' : 'attention',
+        title: `${name} 粗利率 ${Math.round(c.marginRate * 100)}%`,
+        detail: `受注 ${fmtYen(c.budget)} − EAC原価 ${fmtYen(c.eacCost)} ＝ 粗利 ${fmtSignedYen(c.margin)}（目安 ${Math.round(MARGIN_TARGET * 100)}%）`,
+        to: `/projects/${p.project.id}/dashboard`,
       })
     }
     if (p.overdue.length > 0) {

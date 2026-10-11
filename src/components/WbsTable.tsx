@@ -1,10 +1,11 @@
 import { ChevronDown, ChevronRight, Lock, Plus, TriangleAlert } from 'lucide-react'
 import { useMemo, useState, type KeyboardEvent } from 'react'
 import { daysBetween, fmtMD } from '../domain/dates'
-import { fmtNum, fmtSignedH } from '../domain/format'
+import { fmtNum, fmtSignedH, fmtSignedYenShort, fmtYenShort } from '../domain/format'
 import type { Metrics } from '../domain/calculations'
 import { isOverdue } from '../domain/calculations'
 import type { User, WbsItem } from '../domain/types'
+import { usePref } from '../hooks/usePref'
 import { useApp } from '../store/AppContext'
 import { Avatar, AvatarStack } from './Avatar'
 import { ProgressBar } from './ProgressBar'
@@ -24,17 +25,17 @@ interface Row {
   isParent: boolean
 }
 
-function VarianceCell({ value }: { value: number }) {
+function VarianceCell({ value, text }: { value: number; text: string }) {
   const r = Math.round(value * 10) / 10
   if (r > 0)
     return (
       <span className="var var--over" title="EAC が PLAN を超過する見込み">
         <TriangleAlert size={12} strokeWidth={2.4} />
-        {fmtSignedH(r)}
+        {text}
       </span>
     )
-  if (r < 0) return <span className="var var--under">{fmtSignedH(r)}</span>
-  return <span className="var var--zero">±0h</span>
+  if (r < 0) return <span className="var var--under">{text}</span>
+  return <span className="var var--zero">{text}</span>
 }
 
 export function WbsTable({ projectId, selectedId, onOpen, onAdd }: Props) {
@@ -42,6 +43,23 @@ export function WbsTable({ projectId, selectedId, onOpen, onAdd }: Props) {
   const { idx, metrics, numbers, userById, todayISO } = derived
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set())
   const [ownerFilter, setOwnerFilter] = useState<string>('all')
+  /** 数値列の表示単位: 工数(h) / 人件費(円) */
+  const [unit, setUnit] = usePref<'h' | 'yen'>('wbs-unit', 'h', ['h', 'yen'])
+  const money = (h: number, yen: number) =>
+    unit === 'h' ? (
+      <>
+        {fmtNum(h)}
+        <i>h</i>
+      </>
+    ) : (
+      <>{fmtYenShort(yen)}</>
+    )
+  const varianceCell = (hours: number, yen: number) =>
+    unit === 'h' ? (
+      <VarianceCell value={hours} text={fmtSignedH(hours)} />
+    ) : (
+      <VarianceCell value={yen} text={fmtSignedYenShort(yen)} />
+    )
 
   const tops = useMemo(() => idx.topOf.get(projectId) ?? [], [idx, projectId])
   const totals = derived.summaryById.get(projectId)?.totals
@@ -124,17 +142,34 @@ export function WbsTable({ projectId, selectedId, onOpen, onAdd }: Props) {
             {allCollapsed ? 'すべて展開' : 'すべて折りたたむ'}
           </button>
         </div>
-        <label className="wbs__filter">
-          <span>担当</span>
-          <select value={ownerFilter} onChange={(e) => setOwnerFilter(e.target.value)}>
-            <option value="all">すべて</option>
-            {ownersInProject.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="wbs__toolbar-right">
+          <div className="unit-toggle" role="radiogroup" aria-label="表示単位">
+            <button type="button" role="radio" aria-checked={unit === 'h'} className={cx(unit === 'h' && 'is-on')} onClick={() => setUnit('h')}>
+              工数 (h)
+            </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={unit === 'yen'}
+              className={cx(unit === 'yen' && 'is-on')}
+              onClick={() => setUnit('yen')}
+              title="工数 × 単価の人件費（万円表記）"
+            >
+              コスト (円)
+            </button>
+          </div>
+          <label className="wbs__filter">
+            <span>担当</span>
+            <select value={ownerFilter} onChange={(e) => setOwnerFilter(e.target.value)}>
+              <option value="all">すべて</option>
+              {ownersInProject.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       </div>
 
       <div className="wbs__scroll">
@@ -246,11 +281,11 @@ export function WbsTable({ projectId, selectedId, onOpen, onAdd }: Props) {
                 </div>
                 <div role="cell" className="wbs__date">{fmtMD(m.startDate)}</div>
                 <div role="cell" className={cx('wbs__date', od && 'is-late')}>{fmtMD(m.endDate)}</div>
-                <div role="cell" className="num">{fmtNum(m.plan)}<i>h</i></div>
-                <div role="cell" className="num">{fmtNum(m.act)}<i>h</i></div>
-                <div role="cell" className="num">{fmtNum(m.etc)}<i>h</i></div>
-                <div role="cell" className="num num--strong">{fmtNum(m.eac)}<i>h</i></div>
-                <div role="cell" className="num"><VarianceCell value={m.variance} /></div>
+                <div role="cell" className="num">{money(m.plan, m.planCost)}</div>
+                <div role="cell" className="num">{money(m.act, m.actCost)}</div>
+                <div role="cell" className="num">{money(m.etc, m.etcCost)}</div>
+                <div role="cell" className="num num--strong">{money(m.eac, m.eacCost)}</div>
+                <div role="cell" className="num">{varianceCell(m.variance, m.varianceCost)}</div>
                 <div role="cell" className="wbs__progress">
                   <span>{Math.round(m.progress)}%</span>
                   <ProgressBar value={m.progress} size="sm" tone={m.status === 'Done' ? 'good' : 'accent'} />
@@ -271,11 +306,11 @@ export function WbsTable({ projectId, selectedId, onOpen, onAdd }: Props) {
               <div role="cell" />
               <div role="cell" />
               <div role="cell" />
-              <div role="cell" className="num">{fmtNum(totals.plan)}<i>h</i></div>
-              <div role="cell" className="num">{fmtNum(totals.act)}<i>h</i></div>
-              <div role="cell" className="num">{fmtNum(totals.etc)}<i>h</i></div>
-              <div role="cell" className="num num--strong">{fmtNum(totals.eac)}<i>h</i></div>
-              <div role="cell" className="num"><VarianceCell value={totals.variance} /></div>
+              <div role="cell" className="num">{money(totals.plan, totals.planCost)}</div>
+              <div role="cell" className="num">{money(totals.act, totals.actCost)}</div>
+              <div role="cell" className="num">{money(totals.etc, totals.etcCost)}</div>
+              <div role="cell" className="num num--strong">{money(totals.eac, totals.eacCost)}</div>
+              <div role="cell" className="num">{varianceCell(totals.variance, totals.varianceCost)}</div>
               <div role="cell" className="wbs__progress">
                 <span>{Math.round(totals.progress)}%</span>
                 <ProgressBar value={totals.progress} size="sm" />

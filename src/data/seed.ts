@@ -12,15 +12,18 @@ import { addDays, parseDate, toISO, weekStartOf, workdaysBetween } from '../doma
  *   Workload  K 93/118/123/85%  H 83/95/75/75%  U 60/62/94/69%  S 73/87/112/71%
  *   B社 MES構想 : WATCH（EAC超過・WBSあり・主サンプル）
  *   A社 SaaS導入: GOOD （進捗が工数消化より先行）
- *   C社 Smart保全: RISK （遅延・EAC超過・Blocked）
- *   新商材GTM    : GOOD （小規模）
+ *   C社 SCADA: RISK （遅延・EAC超過・Blocked）
+ *   新商材GTM    : GOOD （小規模・社内PJなので受注額なし）
+ *
+ * 人件費は 工数 × 単価（K 8,000 / H 7,000 / U 6,000 / S 5,000 円/h）。受注額に対する粗利率の目安:
+ *   B社 約14% / A社 約32% / C社 約4%（薄利）
  */
 
 export const USERS: User[] = [
-  { id: 'u-k', name: 'Kさん', initials: 'K', weeklyCapacity: 40 },
-  { id: 'u-h', name: 'Hさん', initials: 'H', weeklyCapacity: 40 },
-  { id: 'u-u', name: 'Uさん', initials: 'U', weeklyCapacity: 40 },
-  { id: 'u-s', name: 'Sさん', initials: 'S', weeklyCapacity: 40 },
+  { id: 'u-k', name: 'Kさん', initials: 'K', weeklyCapacity: 40, hourlyRate: 8000 },
+  { id: 'u-h', name: 'Hさん', initials: 'H', weeklyCapacity: 40, hourlyRate: 7000 },
+  { id: 'u-u', name: 'Uさん', initials: 'U', weeklyCapacity: 40, hourlyRate: 6000 },
+  { id: 'u-s', name: 'Sさん', initials: 'S', weeklyCapacity: 40, hourlyRate: 5000 },
 ]
 
 const K = 'u-k'
@@ -48,6 +51,8 @@ interface PhaseDef {
 interface ProjectDef {
   id: string
   name: string
+  /** 受注額・予算（円）。社内PJは未設定 */
+  budget?: number
   status: ProjectStatus
   s: number
   e: number
@@ -63,6 +68,7 @@ const PROJECTS: ProjectDef[] = [
   {
     id: 'bmes',
     name: 'B社 MES構想',
+    budget: 2400000,
     status: 'active',
     s: -14,
     e: 39,
@@ -96,6 +102,7 @@ const PROJECTS: ProjectDef[] = [
   {
     id: 'asaas',
     name: 'A社 SaaS導入',
+    budget: 1800000,
     status: 'active',
     s: -28,
     e: 25,
@@ -126,8 +133,9 @@ const PROJECTS: ProjectDef[] = [
     ],
   },
   {
-    id: 'csmart',
-    name: 'C社 Smart保全',
+    id: 'cscada',
+    name: 'C社 SCADA',
+    budget: 2000000,
     status: 'active',
     s: -35,
     e: 28,
@@ -274,8 +282,8 @@ export function createSeed(today: Date): AppData {
   const risks: Risk[] = [
     { id: 'r-b1', projectId: 'bmes', severity: 'medium', title: 'PJ化判断（本導入フェーズへ進めるか）', status: 'open' },
     { id: 'r-b2', projectId: 'bmes', wbsId: 'bmes-2-2', severity: 'low', title: '構想の論点増加によるMES構想の工数膨張', status: 'watching' },
-    { id: 'r-c1', projectId: 'csmart', wbsId: 'csmart-2-2', severity: 'high', title: 'センサー納品遅延でPoC全体の日程に影響', status: 'open' },
-    { id: 'r-c2', projectId: 'csmart', severity: 'medium', title: '現場担当者の確保（検証期間）', status: 'watching' },
+    { id: 'r-c1', projectId: 'cscada', wbsId: 'cscada-2-2', severity: 'high', title: 'センサー納品遅延でPoC全体の日程に影響', status: 'open' },
+    { id: 'r-c2', projectId: 'cscada', severity: 'medium', title: '現場担当者の確保（検証期間）', status: 'watching' },
     { id: 'r-a1', projectId: 'asaas', severity: 'low', title: '旧システムのデータ品質（欠損）', status: 'watching' },
   ]
 
@@ -288,6 +296,7 @@ export function createSeed(today: Date): AppData {
       startDate: at(p.s),
       endDate: at(p.e),
       health: null,
+      budget: p.budget,
     })),
     wbs,
     timeEntries,

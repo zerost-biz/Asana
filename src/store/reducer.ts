@@ -14,6 +14,8 @@ export interface LogWorkPayload {
 export type Action =
   | { type: 'LOAD'; data: AppData }
   | { type: 'RESET'; data: AppData }
+  | { type: 'PROJECT_ADD'; project: Project; items: WbsItem[] }
+  | { type: 'PROJECT_DELETE'; id: string }
   | { type: 'WBS_ADD'; item: WbsItem }
   | { type: 'WBS_UPDATE'; id: string; patch: Partial<Omit<WbsItem, 'id' | 'projectId'>> }
   | { type: 'WBS_DELETE'; id: string }
@@ -33,6 +35,20 @@ export function reducer(state: AppData, action: Action): AppData {
     case 'LOAD':
     case 'RESET':
       return action.data
+
+    case 'PROJECT_ADD':
+      return { ...state, projects: [...state.projects, action.project], wbs: [...state.wbs, ...action.items] }
+
+    case 'PROJECT_DELETE': {
+      const gone = new Set(state.wbs.filter((w) => w.projectId === action.id).map((w) => w.id))
+      return {
+        ...state,
+        projects: state.projects.filter((p) => p.id !== action.id),
+        wbs: state.wbs.filter((w) => w.projectId !== action.id),
+        timeEntries: state.timeEntries.filter((e) => !gone.has(e.wbsId)),
+        risks: state.risks.filter((r) => r.projectId !== action.id),
+      }
+    }
 
     case 'WBS_ADD':
       return { ...state, wbs: [...state.wbs, action.item] }

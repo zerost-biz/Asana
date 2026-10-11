@@ -2,10 +2,11 @@ import { Check, Flag } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { isOverdue, type Metrics } from '../domain/calculations'
 import { daysBetween, fmtMD } from '../domain/dates'
-import { fmtNum, fmtPct, fmtSignedH } from '../domain/format'
+import { fmtDays, fmtNum, fmtPct, fmtSignedH, fmtSignedYen, fmtYen, fmtYenShort } from '../domain/format'
 import type { Health, WbsItem } from '../domain/types'
 import { useApp } from '../store/AppContext'
 import { Card } from './Card'
+import { useProjectDialog } from './ProjectDialogHost'
 import { KpiCard } from './KpiCard'
 import { ProgressBar } from './ProgressBar'
 import { HealthBadge, WbsStatusBadge } from './StatusBadge'
@@ -16,9 +17,10 @@ import { cx } from './cx'
 export function ProjectDashboard({ projectId }: { projectId: string }) {
   const { data, derived, actions } = useApp()
   const navigate = useNavigate()
+  const { openEdit } = useProjectDialog()
   const summary = derived.summaryById.get(projectId)
   if (!summary) return null
-  const { project, totals, health } = summary
+  const { project, totals, health, cost } = summary
   const { idx, metrics, todayISO } = derived
 
   const phases = (idx.topOf.get(projectId) ?? []).map((t) => ({ item: t, m: metrics.get(t.id) as Metrics }))
@@ -39,6 +41,33 @@ export function ProjectDashboard({ projectId }: { projectId: string }) {
     .slice(0, 6)
 
   const risks = data.risks.filter((r) => r.projectId === projectId)
+
+  // メンバー別の人件費（ACT は入力者、PLAN/ETC は担当者の単価）
+  const memberRows = (() => {
+    type Row = { id: string | null; actH: number; actCost: number; etcH: number; etcCost: number }
+    const rows = new Map<string, Row>()
+    const get = (id: string | null) => {
+      const k = id ?? '_none'
+      const r = rows.get(k) ?? { id, actH: 0, actCost: 0, etcH: 0, etcCost: 0 }
+      rows.set(k, r)
+      return r
+    }
+    const ids = new Set(leaves.map((l) => l.id))
+    for (const e of data.timeEntries) {
+      if (!ids.has(e.wbsId)) continue
+      const r = get(e.userId)
+      r.actH += e.hours
+      r.actCost += e.hours * derived.rateOf(e.userId)
+    }
+    for (const l of leaves) {
+      if (l.status === 'Done' && l.etcHours === 0) continue
+      const r = get(l.ownerId)
+      r.etcH += l.etcHours
+      r.etcCost += l.etcHours * derived.rateOf(l.ownerId)
+    }
+    return [...rows.values()].sort((a, b) => b.actCost + b.etcCost - (a.actCost + a.etcCost))
+  })()
+  const costScale = Math.max(1, totals.eacCost, cost.budget ?? 0) * 1.05
   const gap = totals.progress - (totals.burn ?? 0) * 100
   const burnPct = (totals.burn ?? 0) * 100
 
@@ -57,6 +86,110 @@ export function ProjectDashboard({ projectId }: { projectId: string }) {
           sub={totals.plan > 0 ? `PLANの ${totals.variance >= 0 ? '+' : ''}${Math.round((totals.variance / totals.plan) * 100)}%` : undefined}
         />
       </div>
+
+      <Card
+        title="人件費（原価）と粗利"
+        subtitle="工数 × 原価単価。実績は入力した人の単価、残工数・計画は担当者の単価で計算（単価は 設定 → メンバーと単価）"
+        action={
+          <button type="button" className="link-btn" onClick={() => openEdit(projectId)}>
+            {cost.budget === null ? '受注額を設定' : '受注額を変更'}
+          </button>
+        }
+        className="pdash__cost"
+      >
+        <div className="ctiles">
+          <div className="ctile">
+            <span>受注額・予算</span>
+            <b>{cost.budget === null ? '未設定' : fmtYen(cost.budget)}</b>
+            <small>{cost.budget === null ? '設定すると粗利を計算します' : '契約・予算'}</small>
+          </div>
+          <div className="ctile">
+            <span>PLAN 原価</span>
+            <b>{fmtYen(totals.planCost)}</b>
+            <small>{fmtNum(totals.plan)}h ＝ {fmtDays(totals.plan)}</small>
+          </div>
+          <div className="ctile">
+            <span>ACT 原価（実績）</span>
+            <b>{fmtYen(totals.actCost)}</b>
+            <small>{fmtNum(totals.act)}h ＝ {fmtDays(totals.act)}</small>
+          </div>
+          <div className="ctile ctile--strong">
+            <span>EAC 原価（見込み）</span>
+            <b>{fmtYen(totals.eacCost)}</b>
+            <small>{fmtNum(totals.eac)}h ＝ {fmtDays(totals.eac)}</small>
+          </div>
+          <div className={cx('ctile', totals.varianceCost > 0 && 'ctile--warn')}>
+            <span>原価差異（EAC − PLAN）</span>
+            <b>{fmtSignedYen(totals.varianceCost)}</b>
+            <small>{totals.planCost > 0 ? `PLAN原価の ${totals.varianceCost >= 0 ? '+' : ''}${Math.round((totals.varianceCost / totals.planCost) * 100)}%` : ' '}</small>
+          </div>
+          <div className={cx('ctile', cost.marginRate !== null && cost.marginRate < 0.1 && 'ctile--warn')}>
+            <span>見込み粗利</span>
+            <b>{cost.margin === null ? '—' : fmtSignedYen(cost.margin)}</b>
+            <small>
+              {cost.marginRate === null
+                ? '受注額が未設定'
+                : `粗利率 ${Math.round(cost.marginRate * 100)}%（計画時 ${Math.round(((cost.planMargin ?? 0) / (cost.budget ?? 1)) * 100)}%）`}
+            </small>
+          </div>
+        </div>
+
+        <div className="margin" aria-label="受注額とコストの内訳">
+          <div className="margin__bar">
+            <span className="margin__act" style={{ width: `${(totals.actCost / costScale) * 100}%` }} />
+            <span
+              className="margin__etc"
+              style={{ left: `${(totals.actCost / costScale) * 100}%`, width: `${(totals.etcCost / costScale) * 100}%` }}
+            />
+            {cost.margin !== null && cost.margin > 0 && (
+              <span
+                className="margin__profit"
+                style={{ left: `${(totals.eacCost / costScale) * 100}%`, width: `${(cost.margin / costScale) * 100}%` }}
+              />
+            )}
+            {cost.budget !== null && (
+              <span className="margin__budget" style={{ left: `${(cost.budget / costScale) * 100}%` }} title={`受注額 ${fmtYen(cost.budget)}`} />
+            )}
+            <span className="margin__plan" style={{ left: `${(totals.planCost / costScale) * 100}%` }} title={`PLAN原価 ${fmtYen(totals.planCost)}`} />
+          </div>
+          <div className="margin__legend">
+            <span><i className="lg lg--act" />ACT原価 {fmtYenShort(totals.actCost)}</span>
+            <span><i className="lg lg--etc" />ETC原価 {fmtYenShort(totals.etcCost)}</span>
+            {cost.margin !== null && cost.margin > 0 && <span><i className="lg lg--profit" />粗利 {fmtYenShort(cost.margin)}</span>}
+            <span><i className="lg lg--plan" />PLAN原価の位置</span>
+            {cost.budget !== null && <span><i className="lg lg--budget" />受注額の位置</span>}
+          </div>
+        </div>
+
+        <div className="members members--cost" role="table" aria-label="メンバー別の人件費">
+          <div className="members__row members__row--head" role="row">
+            <span>メンバー</span>
+            <span className="num">単価（円/h）</span>
+            <span className="num">ACT（h）</span>
+            <span className="num">ACT原価</span>
+            <span className="num">ETC（h）</span>
+            <span className="num">ETC原価</span>
+            <span className="num">EAC原価</span>
+          </div>
+          {memberRows.map((r) => {
+            const u = r.id ? derived.userById.get(r.id) : undefined
+            return (
+              <div key={r.id ?? 'none'} className="members__row" role="row">
+                <span className="members__name">
+                  <Avatar user={u} size="sm" />
+                  {u?.name ?? '担当未設定'}
+                </span>
+                <span className="num">{Math.round(derived.rateOf(r.id)).toLocaleString('ja-JP')}</span>
+                <span className="num">{fmtNum(r.actH)}</span>
+                <span className="num">{fmtYen(r.actCost)}</span>
+                <span className="num">{fmtNum(r.etcH)}</span>
+                <span className="num">{fmtYen(r.etcCost)}</span>
+                <span className="num num--strong">{fmtYen(r.actCost + r.etcCost)}</span>
+              </div>
+            )
+          })}
+        </div>
+      </Card>
 
       <div className="pdash__grid">
         <Card title="進捗 と 工数消化" subtitle="進捗が工数消化を下回ると、手戻り・見積り不足のサイン">
